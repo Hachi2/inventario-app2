@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inventario Offline</title>
+<meta name="theme-color" content="#E8A93A">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="icons/icon-192.png">
+</head>
+<body data-theme="light">
+
+<!-- ===================== PANTALLA: LOGIN ===================== -->
+<section id="view-login" class="view view-login active">
+  <div class="login-card">
+    <div class="brand">
+      <img id="login-logo-img" class="brand-logo" hidden alt="Logo">
+      <div id="login-logo-fallback" class="brand-mark">IV</div>
+      <h1 id="login-empresa-nombre">Inventario</h1>
+      <p class="brand-sub">Control de almacén, sin conexión</p>
+    </div>
+    <form id="form-login" autocomplete="off">
+      <label class="field">
+        <span>Usuario</span>
+        <input type="text" id="login-usuario" required placeholder="ej. jcastro">
+      </label>
+      <label class="field">
+        <span>Contraseña</span>
+        <input type="password" id="login-password" required placeholder="••••••••">
+      </label>
+      <p id="login-error" class="form-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">Entrar</button>
+    </form>
+    <p class="login-hint">Usuario inicial: <b>admin</b> · Contraseña: <b>admin123</b><br>Cámbiala apenas ingreses.</p>
+  </div>
+</section>
+
+<!-- ===================== APP PRINCIPAL ===================== -->
+<div id="app-shell" class="app-shell" hidden>
+
+  <header class="topbar">
+    <div class="topbar-row">
+      <button id="btn-header-back" class="icon-btn" hidden aria-label="Volver"></button>
+      <img id="header-logo" class="header-logo" hidden alt="">
+      <div class="header-titles">
+        <h1 id="header-title">Inicio</h1>
+        <p id="header-subtitle" class="muted small" hidden></p>
+      </div>
+      <div id="header-actions" class="header-actions"></div>
+    </div>
+    <div id="header-search-row" class="search-row" hidden>
+      <div class="search-wrap">
+        <span class="search-icon"></span>
+        <input type="search" id="search-input" placeholder="Buscar código, descripción, galpón...">
+        <button id="btn-clear-search" class="clear-btn" hidden aria-label="Limpiar búsqueda"></button>
+      </div>
+      <button id="btn-scan" class="icon-btn" title="Escanear código" aria-label="Escanear código"></button>
+    </div>
+  </header>
+
+  <!-- ---------- TAB: INICIO ---------- -->
+  <main id="view-home" class="view tab-view active">
+    <div class="home-greeting">
+      <h1>Bienvenido, <span id="home-nombre">—</span></h1>
+      <p>¿Qué deseas hacer?</p>
+    </div>
+    <div class="home-menu">
+      <button class="home-card home-card-inventario" data-screen="inventario">
+        <span class="home-card-icon"></span>
+        <span class="home-card-label">Inventario</span>
+      </button>
+      <button class="home-card home-card-entrada" data-screen="entrada">
+        <span class="home-card-icon"></span>
+        <span class="home-card-label">Entrada de almacén</span>
+      </button>
+      <button class="home-card home-card-salida" data-screen="salida">
+        <span class="home-card-icon"></span>
+        <span class="home-card-label">Salida de almacén</span>
+      </button>
+      <button class="home-card home-card-traspaso" data-screen="traspaso">
+        <span class="home-card-icon"></span>
+        <span class="home-card-label">Traspaso</span>
+      </button>
+    </div>
+    <button id="btn-ayuda-inicio" class="help-link"><span class="icon"></span> ¿Cómo funciona la app?</button>
+  </main>
+
+  <!-- ---------- PANTALLA: INVENTARIO (drill-down) ---------- -->
+  <main id="view-inventario" class="view pushed-view">
+    <div id="empty-state" class="empty-state" hidden>
+      <p>Todavía no hay inventario cargado.</p>
+      <button id="btn-empty-import" class="btn btn-primary">Cargar Excel</button>
+    </div>
+    <div id="lista-inventario" class="card-list"></div>
+  </main>
+
+  <!-- ---------- PANTALLA: MOVIMIENTO (Entrada / Salida / Traspaso) ---------- -->
+  <main id="view-movimiento" class="view pushed-view">
+    <div id="mov-destino-wrap" class="field" hidden>
+      <span>Galpón de destino</span>
+      <input type="text" id="mov-destino-galpon" placeholder="ej. G3">
+    </div>
+    <div id="mov-sugerencias" class="suggestion-list"></div>
+    <div class="section-header">
+      <h2>Lista de trabajo</h2>
+      <span id="mov-contador" class="muted small"></span>
+    </div>
+    <div id="mov-lista-trabajo" class="card-list"></div>
+    <p id="mov-vacio" class="muted small" style="text-align:center;margin-top:24px;">
+      Busca un artículo arriba y toca "Agregar" para sumarlo a la lista.
+    </p>
+  </main>
+
+  <!-- ---------- TAB: REGISTRO DE ACTIVIDAD ---------- -->
+  <main id="view-auditoria" class="view tab-view">
+    <div class="section-header">
+      <h2>Registro de actividad</h2>
+      <div class="section-actions">
+        <button id="btn-descargar-log" class="btn btn-secondary btn-sm">Descargar</button>
+        <button id="btn-borrar-log" class="btn btn-danger btn-sm">Borrar registro</button>
+      </div>
+    </div>
+    <p class="muted small">Cada modificación queda registrada con usuario, fecha y hora. Descarga el registro cada semana y bórralo para liberar espacio.</p>
+    <div id="lista-auditoria" class="log-list"></div>
+  </main>
+
+  <!-- ---------- TAB: USUARIOS ---------- -->
+  <main id="view-usuarios" class="view tab-view">
+    <div class="section-header">
+      <h2>Usuarios</h2>
+      <button id="btn-nuevo-usuario" class="btn btn-primary btn-sm">+ Nuevo</button>
+    </div>
+    <div id="lista-usuarios" class="user-list"></div>
+  </main>
+
+  <!-- ---------- TAB: AJUSTES ---------- -->
+  <main id="view-ajustes" class="view tab-view">
+    <h2>Marca de la empresa</h2>
+    <div class="bg-controls">
+      <label class="field">
+        <span>Logo (aparece al iniciar sesión)</span>
+        <input type="file" id="logo-input" accept="image/*">
+      </label>
+      <div class="logo-actions">
+        <button id="btn-logo-como-fondo" class="btn btn-secondary btn-sm">Usar el logo como fondo</button>
+        <button id="btn-quitar-logo" class="btn btn-outline btn-sm">Quitar logo</button>
+      </div>
+    </div>
+
+    <h2>Apariencia</h2>
+    <div class="theme-options">
+      <button class="theme-swatch" data-theme="light">
+        <span class="swatch swatch-light"></span> Claro
+      </button>
+      <button class="theme-swatch" data-theme="dark">
+        <span class="swatch swatch-dark"></span> Oscuro
+      </button>
+      <button class="theme-swatch" data-theme="image">
+        <span class="swatch swatch-image"></span> Imagen de fondo
+      </button>
+    </div>
+
+    <div id="bg-image-controls" class="bg-controls" hidden>
+      <label class="field">
+        <span>Imagen de fondo</span>
+        <input type="file" id="bg-image-input" accept="image/*">
+      </label>
+      <label class="field">
+        <span>Qué tan visible se ve <b id="bg-opacity-value">30%</b></span>
+        <input type="range" id="bg-opacity" min="5" max="90" value="30">
+      </label>
+      <button id="btn-quitar-fondo" class="btn btn-secondary btn-sm">Quitar imagen</button>
+    </div>
+
+    <h2>Mi sesión</h2>
+    <button id="btn-cambiar-password" class="btn btn-secondary btn-block">Cambiar mi contraseña</button>
+    <button id="btn-logout" class="btn btn-outline btn-block">Cerrar sesión</button>
+
+    <p class="muted small version-tag">Inventario Offline · v2.0</p>
+  </main>
+
+  <nav id="bottom-nav" class="bottom-nav">
+    <button class="nav-btn active" data-tab="home">
+      <span class="nav-icon nav-icon-inicio"></span><span>Inicio</span>
+    </button>
+    <button class="nav-btn" data-tab="auditoria">
+      <span class="nav-icon nav-icon-lista"></span><span>Registro</span>
+    </button>
+    <button class="nav-btn" data-tab="usuarios" data-role-gate="1">
+      <span class="nav-icon nav-icon-usuario"></span><span>Usuarios</span>
+    </button>
+    <button class="nav-btn" data-tab="ajustes">
+      <span class="nav-icon nav-icon-ajustes"></span><span>Ajustes</span>
+    </button>
+  </nav>
+
+  <div id="bottom-actionbar" class="bottom-actionbar" hidden>
+    <button id="btn-limpiar-lista" class="btn btn-outline">Limpiar lista</button>
+    <button id="btn-finalizar" class="btn btn-primary btn-finalizar">Finalizar</button>
+  </div>
+</div>
+
+<!-- ===================== MODALES ===================== -->
+
+<div id="modal-detalle" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="detalle-titulo">Ítem</h3>
+      <button class="icon-btn modal-close" data-close="modal-detalle" aria-label="Cerrar"></button>
+    </div>
+    <div id="detalle-body" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="modal-cantidad" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="cantidad-titulo">Agregar artículo</h3>
+      <button class="icon-btn modal-close" data-close="modal-cantidad" aria-label="Cerrar"></button>
+    </div>
+    <div class="modal-body">
+      <p id="cantidad-item-desc" class="muted"></p>
+      <label class="field">
+        <span id="cantidad-label">Cantidad</span>
+        <input type="number" id="cantidad-input" min="0" step="1" inputmode="numeric" autofocus>
+      </label>
+      <button id="btn-confirmar-cantidad" class="btn btn-primary btn-block btn-lg">Agregar a la lista</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-import" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Cargar inventario desde Excel</h3>
+      <button class="icon-btn modal-close" data-close="modal-import" aria-label="Cerrar"></button>
+    </div>
+    <div class="modal-body">
+      <p class="muted small">El archivo debe tener los encabezados: VOLUMEN MAESTRO, VOLUMENES INTERMEDIOS, CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL. INTERMEDIO, TOTAL PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO, OBSERVACIONES, CONTEO, ENTREGADO.</p>
+      <label class="field">
+        <span>Archivo (.xlsx, .xls o .csv)</span>
+        <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv">
+      </label>
+      <label class="checkbox-field">
+        <input type="checkbox" id="import-replace" checked>
+        <span>Reemplazar el inventario actual (si lo desmarcas, se combinará por CODIGO)</span>
+      </label>
+      <p id="import-status" class="muted small"></p>
+      <button id="btn-confirmar-import" class="btn btn-primary btn-block btn-lg">Cargar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-usuario" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="usuario-modal-titulo">Nuevo usuario</h3>
+      <button class="icon-btn modal-close" data-close="modal-usuario" aria-label="Cerrar"></button>
+    </div>
+    <div class="modal-body">
+      <form id="form-usuario">
+        <input type="hidden" id="usuario-original">
+        <label class="field">
+          <span>Usuario</span>
+          <input type="text" id="usuario-nombre-usuario" required>
+        </label>
+        <label class="field">
+          <span>Nombre completo</span>
+          <input type="text" id="usuario-nombre-completo" required>
+        </label>
+        <label class="field">
+          <span>Rol</span>
+          <select id="usuario-rol">
+            <option value="Coordinador">Coordinador</option>
+            <option value="Analista">Analista</option>
+            <option value="Auxiliar">Auxiliar</option>
+          </select>
+        </label>
+        <label class="field">
+          <span id="usuario-password-label">Contraseña</span>
+          <input type="password" id="usuario-password">
+        </label>
+        <p id="usuario-error" class="form-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" id="btn-eliminar-usuario" class="btn btn-danger btn-sm">Eliminar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="modal-ayuda" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Cómo funciona la app</h3>
+      <button class="icon-btn modal-close" data-close="modal-ayuda" aria-label="Cerrar"></button>
+    </div>
+    <div class="modal-body ayuda-body">
+      <p><b>Inventario:</b> revisa y corrige los datos de cada artículo que ya existe.</p>
+      <p><b>Entrada de almacén:</b> usa esta opción cuando llega mercancía nueva. Busca el artículo, indica cuánto llegó y presiona Finalizar.</p>
+      <p><b>Salida de almacén:</b> úsala cuando entregas o sacas mercancía. Busca el artículo, indica cuánto sale y presiona Finalizar.</p>
+      <p><b>Traspaso:</b> úsala para mover artículos de un galpón a otro.</p>
+      <p><b>Registro:</b> ahí queda guardado quién hizo cada cambio y cuándo.</p>
+      <p class="muted small">Si tienes dudas, pídele ayuda a tu Coordinador.</p>
+    </div>
+  </div>
+</div>
+
+<div id="modal-scan" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Escanear código</h3>
+      <button class="icon-btn modal-close" data-close="modal-scan" aria-label="Cerrar"></button>
+    </div>
+    <div class="modal-body">
+      <video id="scan-video" style="width:100%;border-radius:12px;background:#000;" playsinline muted></video>
+      <p id="scan-status" class="muted small" style="text-align:center;margin-top:10px;">Apunta la cámara al código de barras.</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/inventario.js"></script>
+<script src="js/movimientos.js"></script>
+<script src="js/auditoria.js"></script>
+<script src="js/usuarios.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
