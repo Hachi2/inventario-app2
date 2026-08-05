@@ -26,29 +26,33 @@ const Auditoria = {
     lista.innerHTML = registros.map((r) => {
       const fecha = new Date(r.fecha);
       const fechaStr = fecha.toLocaleString("es", { dateStyle: "short", timeStyle: "short" });
-      const detalle = r.accion === "Edición"
+      const detalle = r.codigoItem && r.campo
         ? `${r.codigoItem} · ${r.campo}: "${r.valorAnterior}" → "${r.valorNuevo}"`
-        : `${r.accion}: ${r.valorNuevo}`;
+        : `${r.valorNuevo}`;
       return `
         <div class="log-item">
           <div class="log-top"><span>${escapeHtml(r.nombre || r.usuario)}</span><span class="muted">${fechaStr}</span></div>
-          <div class="log-detail">${escapeHtml(detalle)}</div>
+          <div class="log-detail"><b>${escapeHtml(r.accion)}</b> · ${escapeHtml(detalle)}</div>
         </div>`;
     }).join("");
   },
 
-  async exportarExcel() {
+  async filasParaExportar() {
     const registros = (await DB.getAll("auditoria")).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-    const filas = registros.map((r) => ({
+    return registros.map((r) => ({
       Fecha: new Date(r.fecha).toLocaleString("es"),
       Usuario: r.usuario,
       Nombre: r.nombre,
       Acción: r.accion,
-      Código: r.codigoItem,
+      "Código / referencia": r.codigoItem,
       Campo: r.campo,
       "Valor anterior": r.valorAnterior,
       "Valor nuevo": r.valorNuevo,
     }));
+  },
+
+  async exportarExcel() {
+    const filas = await this.filasParaExportar();
     const hoja = XLSX.utils.json_to_sheet(filas);
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, hoja, "Registro");

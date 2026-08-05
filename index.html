@@ -32,7 +32,6 @@
       <p id="login-error" class="form-error" hidden></p>
       <button type="submit" class="btn btn-primary btn-block btn-lg">Entrar</button>
     </form>
-    <p class="login-hint">Usuario inicial: <b>admin</b> · Contraseña: <b>admin123</b><br>Cámbiala apenas ingreses.</p>
   </div>
 </section>
 
@@ -66,10 +65,6 @@
       <p>¿Qué deseas hacer?</p>
     </div>
     <div class="home-menu">
-      <button class="home-card home-card-inventario" data-screen="inventario">
-        <span class="home-card-icon"></span>
-        <span class="home-card-label">Inventario</span>
-      </button>
       <button class="home-card home-card-entrada" data-screen="entrada">
         <span class="home-card-icon"></span>
         <span class="home-card-label">Entrada de almacén</span>
@@ -82,26 +77,24 @@
         <span class="home-card-icon"></span>
         <span class="home-card-label">Traspaso</span>
       </button>
+      <button class="home-card home-card-conteo" data-screen="conteo">
+        <span class="home-card-icon"></span>
+        <span class="home-card-label">Conteo físico</span>
+      </button>
     </div>
     <button id="btn-ayuda-inicio" class="help-link"><span class="icon"></span> ¿Cómo funciona la app?</button>
   </main>
 
-  <!-- ---------- PANTALLA: INVENTARIO (drill-down) ---------- -->
-  <main id="view-inventario" class="view pushed-view">
-    <div id="empty-state" class="empty-state" hidden>
-      <p>Todavía no hay inventario cargado.</p>
-      <button id="btn-empty-import" class="btn btn-primary">Cargar Excel</button>
-    </div>
-    <div id="lista-inventario" class="card-list"></div>
-  </main>
-
-  <!-- ---------- PANTALLA: MOVIMIENTO (Entrada / Salida / Traspaso) ---------- -->
+  <!-- ---------- PANTALLA: MOVIMIENTO (Entrada / Salida / Traspaso / Conteo) ---------- -->
   <main id="view-movimiento" class="view pushed-view">
     <div id="mov-destino-wrap" class="field" hidden>
       <span>Galpón de destino</span>
       <input type="text" id="mov-destino-galpon" placeholder="ej. G3">
     </div>
     <div id="mov-sugerencias" class="suggestion-list"></div>
+    <p id="mov-sin-datos" class="muted small" style="text-align:center;margin-top:24px;" hidden>
+      Todavía no se cargó el inventario. Pide a tu Coordinador o Analista que lo cargue desde <b>Ajustes → Base de datos</b>.
+    </p>
     <div class="section-header">
       <h2>Lista de trabajo</h2>
       <span id="mov-contador" class="muted small"></span>
@@ -136,6 +129,16 @@
 
   <!-- ---------- TAB: AJUSTES ---------- -->
   <main id="view-ajustes" class="view tab-view">
+    <h2>Base de datos</h2>
+    <div class="bg-controls">
+      <p class="muted small" id="bd-estado">Todavía no se ha cargado el inventario.</p>
+      <div class="logo-actions">
+        <button id="btn-cargar-excel" class="btn btn-primary btn-sm">Cargar Excel</button>
+        <button id="btn-descargar-excel" class="btn btn-secondary btn-sm">Descargar inventario</button>
+      </div>
+      <button id="btn-exportar-todo" class="btn btn-outline btn-block btn-sm" style="margin-top:8px;">Exportar todo lo realizado (Excel)</button>
+    </div>
+
     <h2>Marca de la empresa</h2>
     <div class="bg-controls">
       <label class="field">
@@ -203,16 +206,6 @@
 
 <!-- ===================== MODALES ===================== -->
 
-<div id="modal-detalle" class="modal" hidden>
-  <div class="modal-card">
-    <div class="modal-head">
-      <h3 id="detalle-titulo">Ítem</h3>
-      <button class="icon-btn modal-close" data-close="modal-detalle" aria-label="Cerrar"></button>
-    </div>
-    <div id="detalle-body" class="modal-body"></div>
-  </div>
-</div>
-
 <div id="modal-cantidad" class="modal" hidden>
   <div class="modal-card">
     <div class="modal-head">
@@ -225,6 +218,10 @@
         <span id="cantidad-label">Cantidad</span>
         <input type="number" id="cantidad-input" min="0" step="1" inputmode="numeric" autofocus>
       </label>
+      <div id="cantidad-nota-wrap" class="field" hidden>
+        <span>Observación (opcional)</span>
+        <textarea id="cantidad-nota" rows="2" placeholder="Ej. producto dañado, faltante por revisar..."></textarea>
+      </div>
       <button id="btn-confirmar-cantidad" class="btn btn-primary btn-block btn-lg">Agregar a la lista</button>
     </div>
   </div>
@@ -237,17 +234,14 @@
       <button class="icon-btn modal-close" data-close="modal-import" aria-label="Cerrar"></button>
     </div>
     <div class="modal-body">
-      <p class="muted small">El archivo debe tener los encabezados: VOLUMEN MAESTRO, VOLUMENES INTERMEDIOS, CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL. INTERMEDIO, TOTAL PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO, OBSERVACIONES, CONTEO, ENTREGADO.</p>
+      <p class="muted small">El archivo debe tener los encabezados: VOLUMEN MAESTRO, VOLUMENES INTERMEDIOS, CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL. INTERMEDIO, TOTAL PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO, OBSERVACIONES, CONTEO, ENTREGADO. Si el mismo CODIGO aparece en varias filas, se conservan todas (cada fila es un lote/stock distinto).</p>
       <label class="field">
         <span>Archivo (.xlsx, .xls o .csv)</span>
         <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv">
       </label>
-      <label class="checkbox-field">
-        <input type="checkbox" id="import-replace" checked>
-        <span>Reemplazar el inventario actual (si lo desmarcas, se combinará por CODIGO)</span>
-      </label>
+      <p class="form-error" style="color:var(--danger, #C0392B);">⚠ Esto reemplaza todos los datos actuales por los del archivo. Si hay conteos, entregas o traspasos hechos desde la última carga, se perderán a menos que ya los hayas exportado.</p>
       <p id="import-status" class="muted small"></p>
-      <button id="btn-confirmar-import" class="btn btn-primary btn-block btn-lg">Cargar</button>
+      <button id="btn-confirmar-import" class="btn btn-primary btn-block btn-lg">Cargar y reemplazar</button>
     </div>
   </div>
 </div>
@@ -298,10 +292,10 @@
       <button class="icon-btn modal-close" data-close="modal-ayuda" aria-label="Cerrar"></button>
     </div>
     <div class="modal-body ayuda-body">
-      <p><b>Inventario:</b> revisa y corrige los datos de cada artículo que ya existe.</p>
       <p><b>Entrada de almacén:</b> usa esta opción cuando llega mercancía nueva. Busca el artículo, indica cuánto llegó y presiona Finalizar.</p>
       <p><b>Salida de almacén:</b> úsala cuando entregas o sacas mercancía. Busca el artículo, indica cuánto sale y presiona Finalizar.</p>
       <p><b>Traspaso:</b> úsala para mover artículos de un galpón a otro.</p>
+      <p><b>Conteo físico:</b> úsala cuando cuentas la mercancía a mano. Busca el artículo, escribe cuánto contaste (y una observación si hace falta) y presiona Finalizar.</p>
       <p><b>Registro:</b> ahí queda guardado quién hizo cada cambio y cuándo.</p>
       <p class="muted small">Si tienes dudas, pídele ayuda a tu Coordinador.</p>
     </div>

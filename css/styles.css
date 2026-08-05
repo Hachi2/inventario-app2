@@ -32,6 +32,8 @@
   --card-salida-fg: #8C2E27;
   --card-traspaso-bg: #B7CFF0;
   --card-traspaso-fg: #234A85;
+  --card-conteo-bg: #DCCBF2;
+  --card-conteo-fg: #5A3690;
 }
 
 body[data-theme="dark"]{
@@ -53,6 +55,8 @@ body[data-theme="dark"]{
   --card-salida-fg: #F5B8B2;
   --card-traspaso-bg: #253B5C;
   --card-traspaso-fg: #B7CFF0;
+  --card-conteo-bg: #3B2C54;
+  --card-conteo-fg: #DCCBF2;
 }
 
 *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -217,10 +221,10 @@ input, select, textarea{ font-family: inherit; }
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
 .home-card-icon .icon{ width:24px; height:24px; }
-.home-card-inventario{ background: var(--card-inventario-bg); color: var(--card-inventario-fg); }
 .home-card-entrada{ background: var(--card-entrada-bg); color: var(--card-entrada-fg); }
 .home-card-salida{ background: var(--card-salida-bg); color: var(--card-salida-fg); }
 .home-card-traspaso{ background: var(--card-traspaso-bg); color: var(--card-traspaso-fg); }
+.home-card-conteo{ background: var(--card-conteo-bg); color: var(--card-conteo-fg); }
 .home-card[disabled]{ opacity:0.45; cursor:not-allowed; }
 
 @media (min-width: 560px){ .home-menu{ grid-template-columns: 1fr 1fr; } }
@@ -254,14 +258,21 @@ input, select, textarea{ font-family: inherit; }
 .empty-state p{ margin-bottom:16px; }
 
 /* ---------------- Sugerencias de búsqueda (movimientos) ---------------- */
-.suggestion-list{ display:flex; flex-direction:column; gap:8px; margin-top: 6px; }
+.suggestion-list{ display:flex; flex-direction:column; gap:8px; margin-top: 6px; max-height: 60vh; overflow-y:auto; }
 .suggestion-item{
   background: var(--surface); border:1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;
+  padding: 12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;
 }
 .suggestion-item .s-info{ min-width:0; }
 .suggestion-item .s-codigo{ font-size:12px; color: var(--text-muted); }
 .suggestion-item .s-nombre{ font-size:14px; font-weight:600; }
+.suggestion-item .s-chips{ display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+.s-chip{
+  font-size:11px; background: var(--surface-2); color: var(--text-muted);
+  padding: 2px 8px; border-radius:999px; white-space:nowrap;
+}
+.s-chip-stock{ background: rgba(232,169,58,0.16); color: var(--accent, #B67A1E); font-weight:600; }
+.suggestion-item mark{ background: rgba(232,169,58,0.35); color: inherit; border-radius:3px; padding:0 1px; }
 .suggestion-item .btn-agregar{
   background: var(--accent); color: var(--accent-text); border:none; border-radius:999px;
   padding: 7px 14px; font-size:13px; font-weight:700; cursor:pointer; flex-shrink:0;

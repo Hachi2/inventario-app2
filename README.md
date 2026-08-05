@@ -6,16 +6,35 @@ como una app más y funciona **sin internet** en el día a día.
 ## Novedades de esta versión
 
 - **Pantalla de inicio rediseñada**, con saludo personal y 4 botones grandes
-  de colores: Inventario, Entrada de almacén, Salida de almacén y Traspaso.
+  de colores: Entrada de almacén, Salida de almacén, Traspaso y Conteo
+  físico.
 - **Logo de la empresa**: se sube una sola vez desde Ajustes y aparece
   automáticamente en la pantalla de inicio de sesión y en el encabezado de
   la app. El mismo logo se puede usar como imagen de fondo con un botón.
+- **La base de datos es el Excel que cargues**: en **Ajustes → Base de
+  datos**, el Coordinador o Analista sube el Excel con el inventario y esa
+  pasa a ser la información con la que trabaja toda la app (búsqueda,
+  Entrada, Salida, Traspaso, Conteo) — todos los que entren después ven esos
+  mismos datos.
+- **Búsqueda corregida:** si el mismo CODIGO aparece en varias filas del
+  Excel (distintos lotes o galpones), la búsqueda ahora muestra **todas**
+  las coincidencias por separado — como el filtro de Excel — en vez de
+  quedarse con una sola.
 - **Entrada de almacén**: para registrar mercancía que llega. Suma la
   cantidad al `TOTAL PIEZAS` del artículo.
 - **Salida de almacén**: para registrar mercancía que sale. Suma la
   cantidad al `ENTREGADO` del artículo (disponible también para el rol
   Auxiliar).
 - **Traspaso**: mueve un artículo de un galpón a otro.
+- **Conteo físico** (nuevo): para cuando cuentas la mercancía a mano. Busca
+  el artículo, escribe la cantidad contada (reemplaza el `CONTEO` anterior,
+  no lo suma) y, si quieres, deja una observación. Disponible también para
+  el rol Auxiliar.
+- **Exportar todo lo realizado**: en Ajustes hay un botón para descargar un
+  Excel con dos pestañas — el inventario actual y el registro completo de
+  movimientos — además de la descarga simple del inventario.
+- Las credenciales del usuario inicial ya **no se muestran en la pantalla
+  de login** (quedan solo aquí, para el administrador).
 - Botón de escaneo con la cámara del teléfono (ver limitación abajo).
 - Diseño más cuidado: tarjetas redondeadas, íconos propios (sin emojis),
   tipografía más grande y botones más fáciles de tocar para personas sin
@@ -42,31 +61,32 @@ carpeta completa.
    a pantalla de inicio".
 3. Desde ahora, ábrela sin necesitar conexión.
 
-## Paso 3: pon tu logo y crea los usuarios
+## Paso 3: pon tu logo, crea los usuarios y carga el Excel
 
 1. Entra con **usuario:** `admin` · **contraseña:** `admin123` y cámbiala de
-   inmediato en Ajustes.
+   inmediato en Ajustes. Esta es la única parte donde queda escrita esa
+   contraseña — en la app ya no aparece, solo aquí para ti.
 2. En **Ajustes → Marca de la empresa**, sube tu logo. Aparecerá en la
    pantalla de inicio de sesión y en el encabezado. Si quieres, toca "Usar
    el logo como fondo" para que también se vea (de forma sutil, con
    transparencia) detrás de toda la app.
 3. Ve a **Usuarios** y crea las cuentas del equipo con su rol:
-   - **Coordinador / Analista**: acceso total — Inventario, Entrada, Salida,
-     Traspaso, Usuarios y Registro.
-   - **Auxiliar**: solo puede usar **Inventario** (con edición limitada a
-     CONTEO, ENTREGADO y OBSERVACIONES) y **Salida de almacén**. Las
-     tarjetas de Entrada y Traspaso aparecen desactivadas porque afectan
-     columnas que un Auxiliar no debe tocar directamente.
-4. Desde la pantalla de Inicio, entra a **Inventario** y carga tu Excel con
-   las columnas: `VOLUMEN MAESTRO, VOLUMENES INTERMEDIOS, CODIGO,
-   DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL. INTERMEDIO, TOTAL PIEZAS,
-   GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO, OBSERVACIONES, CONTEO,
-   ENTREGADO`.
+   - **Coordinador / Analista**: acceso total — Entrada, Salida, Traspaso,
+     Conteo físico, cargar el Excel, Usuarios y Registro.
+   - **Auxiliar**: solo puede usar **Salida de almacén** y **Conteo
+     físico** (que cubre CONTEO, ENTREGADO y OBSERVACIONES). Las tarjetas
+     de Entrada y Traspaso aparecen desactivadas porque afectan columnas
+     que un Auxiliar no debe tocar directamente.
+4. En **Ajustes → Base de datos**, toca **Cargar Excel** y sube tu
+   inventario con las columnas: `VOLUMEN MAESTRO, VOLUMENES INTERMEDIOS,
+   CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL. INTERMEDIO, TOTAL
+   PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO, OBSERVACIONES, CONTEO,
+   ENTREGADO`. Ese archivo pasa a ser la base de datos de todos — el CODIGO
+   puede repetirse si tienes varios lotes del mismo artículo, no hay
+   problema.
 
 ## Cómo se usa cada botón de Inicio
 
-- **Inventario:** revisa y corrige los datos de un artículo que ya existe
-  (toca la tarjeta para abrir su detalle).
 - **Entrada de almacén:** cuando llega mercancía. Busca el artículo,
   escribe cuánto llegó, tócalo para agregarlo a la lista de trabajo y
   repite con todos los artículos que quieras. Al final, presiona
@@ -75,6 +95,10 @@ carpeta completa.
 - **Salida de almacén:** igual que Entrada, pero para lo que sale.
 - **Traspaso:** además de buscar el artículo, indica a qué galpón se
   mueve antes de agregarlo a la lista.
+- **Conteo físico:** busca el artículo, escribe la cantidad que contaste a
+  mano (esto **reemplaza** el conteo anterior, no lo suma) y, si hace
+  falta, deja una observación — por ejemplo "faltan 5 por revisar". Al
+  finalizar, se actualiza el CONTEO y las OBSERVACIONES de ese artículo.
 
 > **Nota honesta sobre Traspaso:** en esta versión cada código de artículo
 > vive en un único galpón a la vez (no se reparte el mismo código entre dos
@@ -102,8 +126,9 @@ u otra imagen) con una barra para controlar la transparencia.
 
 **¿Puedo cambiar los colores de las 4 tarjetas de Inicio?**
 Sí — están definidos como variables al principio de `css/styles.css`
-(`--card-inventario-bg`, `--card-entrada-bg`, etc.), fáciles de ajustar a
-los colores de tu marca.
+(`--card-entrada-bg`, `--card-salida-bg`, `--card-traspaso-bg`,
+`--card-conteo-bg`, y su versión `-fg` para el color del texto), fáciles de
+ajustar a los colores de tu marca.
 
 **¿Y si no tengo forma de subir esto a GitHub?**
 Dímelo y preparamos otra vía, o te guío paso a paso con capturas.

@@ -1,20 +1,25 @@
 /* =========================================================
-   movimientos.js — Entrada de almacén, Salida de almacén
-   y Traspaso. Comparten una misma pantalla: se busca un
-   artículo, se indica una cantidad, se arma una lista de
-   trabajo y al presionar "Finalizar" se aplica todo junto.
+   movimientos.js — Entrada, Salida, Traspaso y Conteo físico.
+   Comparten una misma pantalla: se busca un artículo, se
+   indica una cantidad, se arma una lista de trabajo y al
+   presionar "Finalizar" se aplica todo junto.
 
-   Nota importante: cada CODIGO vive en un único GALPÓN en esta
-   versión (no se maneja stock partido por ubicación). Por eso
-   un "Traspaso" mueve el artículo completo de un galpón a otro,
-   no reparte cantidades entre dos galpones distintos.
+   Importante: el CODIGO puede repetirse en varias filas del
+   Excel (varios lotes/stocks distintos). Por eso cada fila se
+   identifica internamente por su "_id" propio, nunca por el
+   CODIGO — así, al buscar, aparecen TODAS las coincidencias
+   (como el filtro de Excel) y cada una se puede mover por
+   separado sin mezclarse con las demás.
+
+   Nota: cada fila vive en un único GALPÓN. Un "Traspaso" mueve
+   esa fila completa de un galpón a otro, no reparte cantidades
+   entre dos galpones distintos.
    ========================================================= */
 
 const MOVIMIENTOS_CONFIG = {
   entrada: {
     titulo: "Entrada de almacén",
     ayuda: "Busca el artículo que llegó e indica cuánto entró.",
-    campo: "TOTAL PIEZAS",
     etiquetaCantidad: "Cantidad que entra",
     accion: "Entrada",
     soloGestor: true,
@@ -22,7 +27,6 @@ const MOVIMIENTOS_CONFIG = {
   salida: {
     titulo: "Salida de almacén",
     ayuda: "Busca el artículo que sale e indica cuánto se entrega.",
-    campo: "ENTREGADO",
     etiquetaCantidad: "Cantidad que sale",
     accion: "Salida",
     soloGestor: false,
@@ -30,12 +34,22 @@ const MOVIMIENTOS_CONFIG = {
   traspaso: {
     titulo: "Traspaso entre galpones",
     ayuda: "Busca el artículo, indica a qué galpón se mueve y la cantidad de referencia.",
-    campo: "GALPÓN",
     etiquetaCantidad: "Cantidad que se traspasa",
     accion: "Traspaso",
     soloGestor: true,
   },
+  conteo: {
+    titulo: "Conteo físico",
+    ayuda: "Busca el artículo y registra cuánto contaste físicamente.",
+    etiquetaCantidad: "Cantidad contada",
+    accion: "Conteo",
+    soloGestor: false,
+    absoluto: true,
+    permiteNota: true,
+  },
 };
+
+const MOSTRAR_MAX_RESULTADOS = 80;
 
 const Movimientos = {
   tipoActual: null,
@@ -53,15 +67,20 @@ const Movimientos = {
       mostrarToast("Tu rol no tiene acceso a esta opción");
       return false;
     }
+    if (Inventario.cache.length === 0) {
+      mostrarToast("Primero carga el inventario en Ajustes");
+    }
     this.tipoActual = tipo;
     this.carrito = [];
     document.getElementById("mov-destino-wrap").hidden = tipo !== "traspaso";
     document.getElementById("mov-destino-galpon").value = "";
     document.getElementById("mov-sugerencias").innerHTML = "";
+    document.getElementById("mov-sin-datos").hidden = Inventario.cache.length !== 0;
     this.render();
     return true;
   },
 
+  /* ---------------- Búsqueda: muestra TODAS las coincidencias ---------------- */
   buscar(texto) {
     const cont = document.getElementById("mov-sugerencias");
     const q = normalizarTexto(texto);
@@ -69,81 +88,125 @@ const Movimientos = {
       cont.innerHTML = "";
       return;
     }
-    const resultados = Inventario.cache
-      .filter((item) => normalizarTexto(item.CODIGO + " " + item["DESCRIPCIÓN"]).includes(q))
-      .slice(0, 6);
 
-    if (resultados.length === 0) {
-      cont.innerHTML = `<p class="muted small" style="padding:6px 2px;">Sin coincidencias.</p>`;
+    const camposBusqueda = ["CODIGO", "DESCRIPCIÓN", "GALPÓN", "SISTEMA", "PEDIDO/ÍTEM"];
+    const todas = Inventario.cache.filter((item) =>
+      normalizarTexto(camposBusqueda.map((c) => item[c]).join(" ")).includes(q)
+    );
+
+    if (todas.length === 0) {
+      cont.innerHTML = `<p class="muted small" style="padding:6px 2px;">Sin coincidencias para "${escapeHtml(texto)}".</p>`;
       return;
     }
-    cont.innerHTML = resultados.map((item) => `
-      <div class="suggestion-item" data-codigo="${escapeHtml(item.CODIGO)}">
-        <div class="s-info">
-          <div class="s-nombre">${escapeHtml(item["DESCRIPCIÓN"] || item.CODIGO)}</div>
-          <div class="s-codigo">${escapeHtml(item.CODIGO)} · ${escapeHtml(item["GALPÓN"] || "")}</div>
-        </div>
-        <button class="btn-agregar">Agregar</button>
-      </div>`).join("");
+
+    // Coincidencias exactas de código primero, luego el resto
+    todas.sort((a, b) => {
+      const aExacto = normalizarTexto(a.CODIGO) === q ? 0 : 1;
+      const bExacto = normalizarTexto(b.CODIGO) === q ? 0 : 1;
+      return aExacto - bExacto;
+    });
+
+    const resultados = todas.slice(0, MOSTRAR_MAX_RESULTADOS);
+    const contadorTxt = todas.length > MOSTRAR_MAX_RESULTADOS
+      ? `Mostrando ${MOSTRAR_MAX_RESULTADOS} de ${todas.length} coincidencias — sigue escribiendo para afinar.`
+      : `${todas.length} coincidencia${todas.length === 1 ? "" : "s"}`;
+
+    cont.innerHTML = `<p class="muted small" style="padding:2px 2px 6px;">${contadorTxt}</p>` +
+      resultados.map((item) => {
+        const chips = [
+          item["GALPÓN"] ? `<span class="s-chip">📦 ${escapeHtml(item["GALPÓN"])}</span>` : "",
+          item["PEDIDO/ÍTEM"] ? `<span class="s-chip">${escapeHtml(item["PEDIDO/ÍTEM"])}</span>` : "",
+          `<span class="s-chip s-chip-stock">Stock: ${item["STOCK FINAL"]}</span>`,
+        ].filter(Boolean).join("");
+        return `
+        <div class="suggestion-item" data-id="${item._id}">
+          <div class="s-info">
+            <div class="s-nombre">${resaltar(item["DESCRIPCIÓN"] || item.CODIGO, texto)}</div>
+            <div class="s-codigo">${resaltar(item.CODIGO, texto)}</div>
+            <div class="s-chips">${chips}</div>
+          </div>
+          <button class="btn-agregar">Agregar</button>
+        </div>`;
+      }).join("");
 
     cont.querySelectorAll(".suggestion-item").forEach((el) => {
-      el.querySelector(".btn-agregar").addEventListener("click", () => this.pedirCantidad(el.dataset.codigo));
+      el.querySelector(".btn-agregar").addEventListener("click", () => this.pedirCantidad(Number(el.dataset.id)));
     });
   },
 
-  pedirCantidad(codigo) {
-    const item = Inventario.cache.find((i) => i.CODIGO === codigo);
+  pedirCantidad(id) {
+    const item = Inventario.cache.find((i) => i._id === id);
     if (!item) return;
     this.itemPendiente = item;
     const cfg = MOVIMIENTOS_CONFIG[this.tipoActual];
+    const esConteo = this.tipoActual === "conteo";
+
     document.getElementById("cantidad-titulo").textContent = item["DESCRIPCIÓN"] || item.CODIGO;
-    document.getElementById("cantidad-item-desc").textContent = `${item.CODIGO} · Stock actual: ${item["STOCK FINAL"]}`;
+    let descTxt = `${item.CODIGO}${item["GALPÓN"] ? " · " + item["GALPÓN"] : ""} · Stock actual: ${item["STOCK FINAL"]}`;
+    if (esConteo) {
+      descTxt += ` · Conteo actual: ${item["CONTEO"] === "" || item["CONTEO"] == null ? "sin contar" : item["CONTEO"]}`;
+    }
+    document.getElementById("cantidad-item-desc").textContent = descTxt;
     document.getElementById("cantidad-label").textContent = cfg.etiquetaCantidad;
-    document.getElementById("cantidad-input").value = "";
+    document.getElementById("cantidad-input").value = esConteo && item["CONTEO"] !== "" && item["CONTEO"] != null ? item["CONTEO"] : "";
+    document.getElementById("cantidad-nota-wrap").hidden = !cfg.permiteNota;
+    document.getElementById("cantidad-nota").value = esConteo ? (item["OBSERVACIONES"] || "") : "";
+
     abrirModal("modal-cantidad");
     setTimeout(() => document.getElementById("cantidad-input").focus(), 200);
   },
 
   confirmarCantidad() {
-    const cantidad = Number(document.getElementById("cantidad-input").value);
-    if (!cantidad || cantidad <= 0) {
+    const cfg = MOVIMIENTOS_CONFIG[this.tipoActual];
+    const valorRaw = document.getElementById("cantidad-input").value;
+    const cantidad = Number(valorRaw);
+    const valido = valorRaw !== "" && !isNaN(cantidad) && cantidad >= 0 && (cfg.absoluto || cantidad > 0);
+    if (!valido) {
       mostrarToast("Escribe una cantidad válida");
       return;
     }
+    let destino;
     if (this.tipoActual === "traspaso") {
-      const destino = document.getElementById("mov-destino-galpon").value.trim();
+      destino = document.getElementById("mov-destino-galpon").value.trim();
       if (!destino) {
         mostrarToast("Indica el galpón de destino");
         return;
       }
-      this._agregarACarrito(this.itemPendiente, cantidad, destino);
-    } else {
-      this._agregarACarrito(this.itemPendiente, cantidad);
     }
+    let nota;
+    if (cfg.permiteNota) {
+      nota = document.getElementById("cantidad-nota").value.trim();
+    }
+    this._agregarACarrito(this.itemPendiente, cantidad, destino, nota);
     cerrarModal("modal-cantidad");
     document.getElementById("search-input").value = "";
     document.getElementById("mov-sugerencias").innerHTML = "";
   },
 
-  _agregarACarrito(item, cantidad, destino) {
-    const existente = this.carrito.find((l) => l.codigo === item.CODIGO);
+  _agregarACarrito(item, cantidad, destino, nota) {
+    const cfg = MOVIMIENTOS_CONFIG[this.tipoActual];
+    const existente = this.carrito.find((l) => l.id === item._id);
     if (existente) {
-      existente.cantidad += cantidad;
+      existente.cantidad = cfg.absoluto ? cantidad : existente.cantidad + cantidad;
       if (destino) existente.destino = destino;
+      if (nota !== undefined) existente.nota = nota;
     } else {
       this.carrito.push({
+        id: item._id,
         codigo: item.CODIGO,
+        galpon: item["GALPÓN"],
         descripcion: item["DESCRIPCIÓN"] || item.CODIGO,
         cantidad,
         destino,
+        nota,
       });
     }
     this.render();
     mostrarToast("Agregado a la lista");
   },
 
-  quitarLinea(codigo) {
-    this.carrito = this.carrito.filter((l) => l.codigo !== codigo);
+  quitarLinea(id) {
+    this.carrito = this.carrito.filter((l) => l.id !== id);
     this.render();
   },
 
@@ -161,22 +224,22 @@ const Movimientos = {
     const contador = document.getElementById("mov-contador");
 
     contador.textContent = this.carrito.length ? `${this.carrito.length} artículo(s)` : "";
-    vacio.hidden = this.carrito.length !== 0;
+    vacio.hidden = this.carrito.length !== 0 || Inventario.cache.length === 0;
 
     cont.innerHTML = this.carrito.map((linea) => `
       <div class="item-card" style="cursor:default;">
         <div class="item-card-main">
           <div class="item-cantidad">${linea.cantidad}</div>
           <div class="item-nombre">${escapeHtml(linea.descripcion)}</div>
-          <div class="item-sub">${escapeHtml(linea.codigo)}${linea.destino ? " → " + escapeHtml(linea.destino) : ""}</div>
+          <div class="item-sub">${escapeHtml(linea.codigo)}${linea.galpon ? " · " + escapeHtml(linea.galpon) : ""}${linea.destino ? " → " + escapeHtml(linea.destino) : ""}${linea.nota ? " · " + escapeHtml(linea.nota) : ""}</div>
         </div>
         <div class="item-card-side">
-          <button class="trash-btn" data-codigo="${escapeHtml(linea.codigo)}" aria-label="Quitar">${svgIcon("papelera")}</button>
+          <button class="trash-btn" data-id="${linea.id}" aria-label="Quitar">${svgIcon("papelera")}</button>
         </div>
       </div>`).join("");
 
     cont.querySelectorAll(".trash-btn").forEach((btn) => {
-      btn.addEventListener("click", () => this.quitarLinea(btn.dataset.codigo));
+      btn.addEventListener("click", () => this.quitarLinea(Number(btn.dataset.id)));
     });
   },
 
@@ -189,23 +252,34 @@ const Movimientos = {
     const actualizados = [];
 
     for (const linea of this.carrito) {
-      const item = Inventario.cache.find((i) => i.CODIGO === linea.codigo);
+      const item = Inventario.cache.find((i) => i._id === linea.id);
       if (!item) continue;
+      const ref = `${item.CODIGO}${item["GALPÓN"] ? " · " + item["GALPÓN"] : ""}`;
 
       if (this.tipoActual === "entrada") {
         const antes = Number(item["TOTAL PIEZAS"]) || 0;
         item["TOTAL PIEZAS"] = antes + linea.cantidad;
         item["STOCK FINAL"] = calcularStockFinal(item);
-        await Auditoria.registrar("Entrada", item.CODIGO, "TOTAL PIEZAS", antes, item["TOTAL PIEZAS"]);
+        await Auditoria.registrar("Entrada", ref, "TOTAL PIEZAS", antes, item["TOTAL PIEZAS"]);
       } else if (this.tipoActual === "salida") {
         const antes = item["ENTREGADO"] === "" || item["ENTREGADO"] == null ? 0 : Number(item["ENTREGADO"]);
         item["ENTREGADO"] = antes + linea.cantidad;
         item["STOCK FINAL"] = calcularStockFinal(item);
-        await Auditoria.registrar("Salida", item.CODIGO, "ENTREGADO", antes, item["ENTREGADO"]);
+        await Auditoria.registrar("Salida", ref, "ENTREGADO", antes, item["ENTREGADO"]);
       } else if (this.tipoActual === "traspaso") {
         const antes = item["GALPÓN"];
         item["GALPÓN"] = linea.destino;
-        await Auditoria.registrar("Traspaso", item.CODIGO, "GALPÓN", antes, `${linea.destino} (${linea.cantidad} uds)`);
+        await Auditoria.registrar("Traspaso", ref, "GALPÓN", antes, `${linea.destino} (${linea.cantidad} uds)`);
+      } else if (this.tipoActual === "conteo") {
+        const antes = item["CONTEO"] === "" || item["CONTEO"] == null ? "" : item["CONTEO"];
+        item["CONTEO"] = linea.cantidad;
+        item["STOCK FINAL"] = calcularStockFinal(item);
+        await Auditoria.registrar("Conteo", ref, "CONTEO", antes, item["CONTEO"]);
+        if (linea.nota) {
+          const notaAntes = item["OBSERVACIONES"] || "-";
+          item["OBSERVACIONES"] = linea.nota;
+          await Auditoria.registrar("Conteo", ref, "OBSERVACIONES", notaAntes, linea.nota);
+        }
       }
       actualizados.push(item);
     }
@@ -218,3 +292,14 @@ const Movimientos = {
     volverAInicio();
   },
 };
+
+/* Resalta la parte del texto que coincide con la búsqueda */
+function resaltar(texto, busqueda) {
+  const t = String(texto ?? "");
+  if (!busqueda) return escapeHtml(t);
+  const q = normalizarTexto(busqueda);
+  const tn = normalizarTexto(t);
+  const idx = tn.indexOf(q);
+  if (idx === -1) return escapeHtml(t);
+  return escapeHtml(t.slice(0, idx)) + "<mark>" + escapeHtml(t.slice(idx, idx + busqueda.length)) + "</mark>" + escapeHtml(t.slice(idx + busqueda.length));
+}

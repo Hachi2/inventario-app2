@@ -10,8 +10,23 @@
    - config      (key: nombre de la config)
    ========================================================= */
 
+/* =========================================================
+   db.js — capa de almacenamiento local (IndexedDB)
+   Todo lo que la app necesita vive en el propio teléfono/PC,
+   por eso funciona sin conexión.
+
+   Tablas (object stores):
+   - inventario  (key interna autoincremental "_id"; CODIGO
+     ya NO es único: puede haber varias filas con el mismo
+     código, como en el Excel — cada una es un lote/stock
+     distinto. Hay un índice sobre CODIGO para búsquedas.)
+   - usuarios    (key: usuario)
+   - auditoria   (key autoincrement)
+   - config      (key: nombre de la config)
+   ========================================================= */
+
 const DB_NAME = "InventarioOfflineDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const DB = {
   _db: null,
@@ -23,9 +38,8 @@ const DB = {
 
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
-        if (!db.objectStoreNames.contains("inventario")) {
-          db.createObjectStore("inventario", { keyPath: "CODIGO" });
-        }
+        const tx = e.target.transaction;
+
         if (!db.objectStoreNames.contains("usuarios")) {
           db.createObjectStore("usuarios", { keyPath: "usuario" });
         }
@@ -34,6 +48,33 @@ const DB = {
         }
         if (!db.objectStoreNames.contains("config")) {
           db.createObjectStore("config", { keyPath: "clave" });
+        }
+
+        // "inventario" cambió de clave (antes CODIGO, ahora "_id" interno)
+        // porque el mismo CODIGO puede repetirse en varias filas del Excel.
+        if (db.objectStoreNames.contains("inventario")) {
+          const oldStore = tx.objectStore("inventario");
+          if (oldStore.keyPath === "CODIGO") {
+            const datosPrevios = [];
+            oldStore.openCursor().onsuccess = (ev) => {
+              const cursor = ev.target.result;
+              if (cursor) {
+                datosPrevios.push(cursor.value);
+                cursor.continue();
+              } else {
+                db.deleteObjectStore("inventario");
+                const nuevo = db.createObjectStore("inventario", { keyPath: "_id", autoIncrement: true });
+                nuevo.createIndex("CODIGO", "CODIGO", { unique: false });
+                datosPrevios.forEach((item) => {
+                  delete item._id;
+                  nuevo.add(item);
+                });
+              }
+            };
+          }
+        } else {
+          const nuevo = db.createObjectStore("inventario", { keyPath: "_id", autoIncrement: true });
+          nuevo.createIndex("CODIGO", "CODIGO", { unique: false });
         }
       };
 

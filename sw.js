@@ -6,7 +6,7 @@
    sin conexión, incluso en modo avión.
    ========================================================= */
 
-const CACHE_NAME = "inventario-offline-v2";
+const CACHE_NAME = "inventario-offline-v3";
 
 const ARCHIVOS_A_GUARDAR = [
   "./",

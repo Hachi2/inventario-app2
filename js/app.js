@@ -35,7 +35,7 @@ function mostrarApp() {
   document.querySelector('[data-screen="traspaso"]').disabled = !Auth.isGestor();
 
   cambiarTab("home");
-  Inventario.cargarDesdeDB();
+  Inventario.cargarDesdeDB().then(actualizarEstadoBD);
 }
 
 function cambiarTab(tab) {
@@ -58,30 +58,7 @@ function cambiarTab(tab) {
 
   if (tab === "auditoria") Auditoria.render();
   if (tab === "usuarios") Usuarios.render();
-}
-
-function abrirPantallaInventario() {
-  pantallaActual = "inventario";
-  document.querySelectorAll(".tab-view, .pushed-view").forEach((v) => v.classList.remove("active"));
-  document.getElementById("view-inventario").classList.add("active");
-
-  document.getElementById("btn-header-back").hidden = false;
-  document.getElementById("header-logo").hidden = true;
-  document.getElementById("header-title").textContent = "Inventario";
-  document.getElementById("header-subtitle").hidden = true;
-  document.getElementById("header-search-row").hidden = false;
-  document.getElementById("search-input").value = "";
-  document.getElementById("btn-clear-search").hidden = true;
-  document.getElementById("header-actions").innerHTML = `
-    <button id="btn-open-import" class="icon-btn" title="Cargar Excel" aria-label="Cargar Excel">${svgIcon("subir")}</button>
-    <button id="btn-open-export" class="icon-btn" title="Descargar Excel" aria-label="Descargar Excel">${svgIcon("descargar")}</button>`;
-  document.getElementById("btn-open-import").addEventListener("click", abrirModalImport);
-  document.getElementById("btn-open-export").addEventListener("click", exportarInventario);
-
-  document.getElementById("bottom-nav").hidden = true;
-  document.getElementById("bottom-actionbar").hidden = true;
-
-  Inventario.buscar("");
+  if (tab === "ajustes") actualizarEstadoBD();
 }
 
 function abrirPantallaMovimiento(tipo) {
@@ -118,9 +95,48 @@ function abrirModalImport() {
 }
 
 function exportarInventario() {
+  if (Inventario.cache.length === 0) {
+    mostrarToast("Todavía no hay inventario cargado");
+    return;
+  }
   Inventario.exportarExcel();
   Auditoria.registrar("Exportación", null, "inventario", "-", "descarga Excel");
   mostrarToast("Descargando Excel…");
+}
+
+async function exportarTodoExcel() {
+  if (Inventario.cache.length === 0) {
+    mostrarToast("Todavía no hay inventario cargado");
+    return;
+  }
+  const libro = XLSX.utils.book_new();
+  const hojaInventario = XLSX.utils.json_to_sheet(Inventario.filasParaExportar());
+  XLSX.utils.book_append_sheet(libro, hojaInventario, "Inventario actual");
+  const hojaRegistro = XLSX.utils.json_to_sheet(await Auditoria.filasParaExportar());
+  XLSX.utils.book_append_sheet(libro, hojaRegistro, "Registro de actividad");
+  const fecha = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(libro, `inventario_completo_${fecha}.xlsx`);
+  await Auditoria.registrar("Exportación", null, "todo", "-", "descarga Excel (inventario + registro)");
+  mostrarToast("Descargando Excel…");
+}
+
+async function actualizarEstadoBD() {
+  const estadoEl = document.getElementById("bd-estado");
+  if (!estadoEl) return;
+  const n = Inventario.cache.length;
+  if (n === 0) {
+    estadoEl.textContent = "Todavía no se ha cargado el inventario.";
+  } else {
+    const meta = Inventario.ultimaCarga;
+    let cuando = "";
+    if (meta && meta.fecha) {
+      const f = new Date(meta.fecha);
+      cuando = ` · cargado el ${f.toLocaleDateString("es")} por ${meta.usuario || "—"}`;
+    }
+    estadoEl.textContent = `${n} fila(s) cargadas${cuando}`;
+  }
+  const btnCargar = document.getElementById("btn-cargar-excel");
+  if (btnCargar) btnCargar.hidden = !Auth.isGestor();
 }
 
 /* -------- Escaneo de código con la cámara (si el navegador lo soporta) -------- */
@@ -204,11 +220,7 @@ async function iniciar() {
 
   // -------- Tarjetas de Inicio --------
   document.querySelectorAll(".home-card").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const pantalla = btn.dataset.screen;
-      if (pantalla === "inventario") abrirPantallaInventario();
-      else abrirPantallaMovimiento(pantalla);
-    });
+    btn.addEventListener("click", () => abrirPantallaMovimiento(btn.dataset.screen));
   });
 
   document.getElementById("btn-ayuda-inicio").addEventListener("click", () => abrirModal("modal-ayuda"));
@@ -216,12 +228,11 @@ async function iniciar() {
   // -------- Botón "atrás" del encabezado --------
   document.getElementById("btn-header-back").addEventListener("click", volverAInicio);
 
-  // -------- Búsqueda (se enruta según la pantalla activa) --------
+  // -------- Búsqueda (dentro de Entrada/Salida/Traspaso/Conteo) --------
   document.getElementById("search-input").addEventListener("input", (e) => {
     const valor = e.target.value;
     document.getElementById("btn-clear-search").hidden = !valor;
-    if (pantallaActual === "inventario") Inventario.buscar(valor);
-    else if (pantallaActual === "movimiento") Movimientos.buscar(valor);
+    if (pantallaActual === "movimiento") Movimientos.buscar(valor);
   });
   document.getElementById("btn-clear-search").addEventListener("click", () => {
     const input = document.getElementById("search-input");
@@ -246,7 +257,9 @@ async function iniciar() {
   });
 
   // -------- Importar inventario --------
-  document.getElementById("btn-empty-import").addEventListener("click", abrirModalImport);
+  document.getElementById("btn-cargar-excel").addEventListener("click", abrirModalImport);
+  document.getElementById("btn-descargar-excel").addEventListener("click", exportarInventario);
+  document.getElementById("btn-exportar-todo").addEventListener("click", () => exportarTodoExcel());
   document.getElementById("btn-confirmar-import").addEventListener("click", async () => {
     const input = document.getElementById("import-file-input");
     const status = document.getElementById("import-status");
@@ -254,12 +267,15 @@ async function iniciar() {
       status.textContent = "Selecciona un archivo primero.";
       return;
     }
+    if (Inventario.cache.length > 0 && !confirm("Esto reemplazará todo el inventario actual por el contenido del archivo. ¿Continuar?")) {
+      return;
+    }
     status.textContent = "Cargando…";
     try {
-      const reemplazar = document.getElementById("import-replace").checked;
-      const n = await Inventario.importarArchivo(input.files[0], reemplazar);
+      const n = await Inventario.importarArchivo(input.files[0]);
       status.textContent = `Listo: ${n} filas cargadas.`;
       mostrarToast("Inventario actualizado");
+      actualizarEstadoBD();
       setTimeout(() => cerrarModal("modal-import"), 700);
     } catch (err) {
       status.textContent = "Error: " + err.message;
@@ -344,16 +360,15 @@ async function iniciar() {
   document.querySelector(".search-icon").innerHTML = ICONS.buscar;
   document.getElementById("btn-clear-search").innerHTML = svgIcon("cerrar");
   document.getElementById("btn-scan").innerHTML = svgIcon("camara");
-  document.querySelector('[data-close="modal-detalle"]').innerHTML = svgIcon("cerrar");
   document.querySelector('[data-close="modal-cantidad"]').innerHTML = svgIcon("cerrar");
   document.querySelector('[data-close="modal-import"]').innerHTML = svgIcon("cerrar");
   document.querySelector('[data-close="modal-usuario"]').innerHTML = svgIcon("cerrar");
   document.querySelector('[data-close="modal-ayuda"]').innerHTML = svgIcon("cerrar");
   document.querySelector('[data-close="modal-scan"]').innerHTML = svgIcon("cerrar");
-  document.querySelector(".home-card-inventario .home-card-icon").innerHTML = svgIcon("caja");
   document.querySelector(".home-card-entrada .home-card-icon").innerHTML = svgIcon("entrada");
   document.querySelector(".home-card-salida .home-card-icon").innerHTML = svgIcon("salida");
   document.querySelector(".home-card-traspaso .home-card-icon").innerHTML = svgIcon("traspaso");
+  document.querySelector(".home-card-conteo .home-card-icon").innerHTML = svgIcon("conteo");
   document.querySelector("#btn-ayuda-inicio .icon").innerHTML = ICONS.ayuda;
   document.querySelector(".nav-btn[data-tab='home'] .nav-icon").innerHTML = ICONS.inicio;
   document.querySelector(".nav-btn[data-tab='auditoria'] .nav-icon").innerHTML = ICONS.lista;
