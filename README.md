@@ -1,21 +1,34 @@
-# Inventario Offline — instrucciones (v2)
+# Inventario Offline — instrucciones (v3)
 
 App web instalable (PWA): se agrega a la pantalla de inicio del teléfono
 como una app más y funciona **sin internet** en el día a día.
 
 ## Novedades de esta versión
 
-- **Pantalla de inicio rediseñada**, con saludo personal y 4 botones grandes
-  de colores: Entrada de almacén, Salida de almacén, Traspaso y Conteo
-  físico.
+- **Varios almacenes independientes (nuevo):** ahora puedes cargar más de
+  un Excel, cada uno con el nombre de almacén que tú elijas (por ejemplo
+  "Almacén Central", "Depósito Norte"). Sus datos **nunca se mezclan** —
+  cambiar de almacén, o hacer una Entrada/Salida/Traspaso/Conteo, solo
+  afecta al almacén que tengas seleccionado en ese momento. El botón con el
+  nombre del almacén actual está arriba de la pantalla de Inicio; tócalo
+  para cambiar de almacén o cargar uno nuevo.
+- **Pantalla de Consulta (nueva):** para buscar y ver la información
+  completa de un artículo **sin modificar nada** — pensada para cuando solo
+  necesitas revisar datos, no hacer un movimiento. La barra de búsqueda ya
+  no aparece al entrar a la app; ahora vive únicamente dentro de Consulta y
+  dentro de Entrada/Salida/Traspaso/Conteo (para buscar qué artículo mover).
+- **Columna "USUARIO" y "FECHA MODIFICACIÓN" (nueva):** cada vez que alguien
+  hace una Entrada, Salida, Traspaso o Conteo sobre un artículo, esas dos
+  columnas se actualizan automáticamente en ese artículo con quién lo hizo y
+  cuándo — se ven en Consulta y quedan incluidas cuando descargas el Excel.
+  Esto es aparte del Registro de actividad general, que sigue llevando el
+  historial completo de todos los cambios.
+- **Pantalla de inicio rediseñada**, con saludo personal y botones grandes
+  de colores: Consulta, Entrada de almacén, Salida de almacén, Traspaso y
+  Conteo físico.
 - **Logo de la empresa**: se sube una sola vez desde Ajustes y aparece
   automáticamente en la pantalla de inicio de sesión y en el encabezado de
   la app. El mismo logo se puede usar como imagen de fondo con un botón.
-- **La base de datos es el Excel que cargues**: en **Ajustes → Base de
-  datos**, el Coordinador o Analista sube el Excel con el inventario y esa
-  pasa a ser la información con la que trabaja toda la app (búsqueda,
-  Entrada, Salida, Traspaso, Conteo) — todos los que entren después ven esos
-  mismos datos.
 - **Búsqueda corregida:** si el mismo CODIGO aparece en varias filas del
   Excel (distintos lotes o galpones), la búsqueda ahora muestra **todas**
   las coincidencias por separado — como el filtro de Excel — en vez de
@@ -26,10 +39,10 @@ como una app más y funciona **sin internet** en el día a día.
   cantidad al `ENTREGADO` del artículo (disponible también para el rol
   Auxiliar).
 - **Traspaso**: mueve un artículo de un galpón a otro.
-- **Conteo físico** (nuevo): para cuando cuentas la mercancía a mano. Busca
-  el artículo, escribe la cantidad contada (reemplaza el `CONTEO` anterior,
-  no lo suma) y, si quieres, deja una observación. Disponible también para
-  el rol Auxiliar.
+- **Conteo físico**: para cuando cuentas la mercancía a mano. Busca el
+  artículo, escribe la cantidad contada (reemplaza el `CONTEO` anterior, no
+  lo suma) y, si quieres, deja una observación. Disponible también para el
+  rol Auxiliar.
 - **Exportar todo lo realizado**: en Ajustes hay un botón para descargar un
   Excel con dos pestañas — el inventario actual y el registro completo de
   movimientos — además de la descarga simple del inventario.
@@ -71,22 +84,33 @@ carpeta completa.
    el logo como fondo" para que también se vea (de forma sutil, con
    transparencia) detrás de toda la app.
 3. Ve a **Usuarios** y crea las cuentas del equipo con su rol:
-   - **Coordinador / Analista**: acceso total — Entrada, Salida, Traspaso,
-     Conteo físico, cargar el Excel, Usuarios y Registro.
-   - **Auxiliar**: solo puede usar **Salida de almacén** y **Conteo
-     físico** (que cubre CONTEO, ENTREGADO y OBSERVACIONES). Las tarjetas
-     de Entrada y Traspaso aparecen desactivadas porque afectan columnas
-     que un Auxiliar no debe tocar directamente.
-4. En **Ajustes → Base de datos**, toca **Cargar Excel** y sube tu
-   inventario con las columnas: `VOLUMEN MAESTRO, VOLUMENES INTERMEDIOS,
-   CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL. INTERMEDIO, TOTAL
-   PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO, OBSERVACIONES, CONTEO,
-   ENTREGADO`. Ese archivo pasa a ser la base de datos de todos — el CODIGO
-   puede repetirse si tienes varios lotes del mismo artículo, no hay
-   problema.
+   - **Coordinador / Analista**: acceso total — Consulta, Entrada, Salida,
+     Traspaso, Conteo físico, cargar el Excel, Usuarios y Registro.
+   - **Auxiliar**: puede usar **Consulta**, **Salida de almacén** y
+     **Conteo físico** (que cubre CONTEO, ENTREGADO y OBSERVACIONES). Las
+     tarjetas de Entrada y Traspaso aparecen desactivadas porque afectan
+     columnas que un Auxiliar no debe tocar directamente.
+4. En **Ajustes → Base de datos** (o tocando el botón del almacén arriba de
+   Inicio), toca **Cargar Excel**. Te va a pedir un **nombre para ese
+   almacén** — escribe uno descriptivo, por ejemplo "Almacén Central" — y
+   luego sube el archivo con las columnas: `VOLUMEN MAESTRO, VOLUMENES
+   INTERMEDIOS, CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL.
+   INTERMEDIO, TOTAL PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO,
+   OBSERVACIONES, CONTEO, ENTREGADO`. Ese archivo pasa a ser la base de
+   datos de ese almacén — el CODIGO puede repetirse si tienes varios lotes
+   del mismo artículo, no hay problema.
+5. **¿Tienes más de un almacén?** Repite el paso 4 con otro nombre (por
+   ejemplo "Depósito Norte") — queda guardado aparte, sin tocar el primero.
+   Para cambiar entre ellos, toca el botón del almacén arriba de Inicio en
+   cualquier momento; lo que elijas ahí es lo único que se ve y se modifica
+   hasta que vuelvas a cambiarlo.
 
 ## Cómo se usa cada botón de Inicio
 
+- **Consulta:** busca un artículo (por código, descripción, galpón, sistema
+  o pedido/ítem) para ver toda su información, incluido quién fue la última
+  persona que lo modificó. No cambia nada — es de solo lectura, disponible
+  para cualquier rol.
 - **Entrada de almacén:** cuando llega mercancía. Busca el artículo,
   escribe cuánto llegó, tócalo para agregarlo a la lista de trabajo y
   repite con todos los artículos que quieras. Al final, presiona
@@ -99,6 +123,11 @@ carpeta completa.
   mano (esto **reemplaza** el conteo anterior, no lo suma) y, si hace
   falta, deja una observación — por ejemplo "faltan 5 por revisar". Al
   finalizar, se actualiza el CONTEO y las OBSERVACIONES de ese artículo.
+
+Todas las pantallas anteriores (menos Consulta) actualizan automáticamente
+las columnas **USUARIO** y **FECHA MODIFICACIÓN** del artículo que tocaste,
+con tu usuario y la fecha/hora — así queda registrado directamente en los
+datos, sin que tengas que hacer nada extra.
 
 > **Nota honesta sobre Traspaso:** en esta versión cada código de artículo
 > vive en un único galpón a la vez (no se reparte el mismo código entre dos

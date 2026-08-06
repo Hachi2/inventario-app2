@@ -34,6 +34,8 @@
   --card-traspaso-fg: #234A85;
   --card-conteo-bg: #DCCBF2;
   --card-conteo-fg: #5A3690;
+  --card-consulta-bg: #B9E4E1;
+  --card-consulta-fg: #1C5C57;
 }
 
 body[data-theme="dark"]{
@@ -57,6 +59,8 @@ body[data-theme="dark"]{
   --card-traspaso-fg: #B7CFF0;
   --card-conteo-bg: #3B2C54;
   --card-conteo-fg: #DCCBF2;
+  --card-consulta-bg: #1F4A46;
+  --card-consulta-fg: #B9E4E1;
 }
 
 *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -180,6 +184,7 @@ input, select, textarea{ font-family: inherit; }
 .icon-btn .icon{ width:19px; height:19px; }
 
 .search-row{ display:flex; gap:8px; margin-top:10px; }
+.search-row[hidden]{ display:none; }
 .search-wrap{ flex:1; position:relative; display:flex; align-items:center; }
 .search-wrap .search-icon{
   position:absolute; left:12px; width:17px; height:17px; color: var(--text-muted); pointer-events:none;
@@ -225,6 +230,33 @@ input, select, textarea{ font-family: inherit; }
 .home-card-salida{ background: var(--card-salida-bg); color: var(--card-salida-fg); }
 .home-card-traspaso{ background: var(--card-traspaso-bg); color: var(--card-traspaso-fg); }
 .home-card-conteo{ background: var(--card-conteo-bg); color: var(--card-conteo-fg); }
+.home-card-consulta{ background: var(--card-consulta-bg); color: var(--card-consulta-fg); }
+
+.almacen-pill{
+  display:flex; align-items:center; gap:8px; width:100%;
+  background: var(--surface); border:1px solid var(--border); border-radius:999px;
+  padding:9px 14px; margin: 2px 0 16px; cursor:pointer; font-size:13px; color: var(--text);
+  box-shadow: var(--shadow);
+}
+.almacen-pill #almacen-pill-icon{ display:flex; color: var(--accent); flex-shrink:0; }
+.almacen-pill #almacen-pill-icon svg{ width:16px; height:16px; }
+#almacen-pill-texto{ flex:1; text-align:left; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.almacen-pill-cambiar{ color: var(--text-muted); font-size:12px; flex-shrink:0; }
+
+.consulta-card{
+  background: var(--surface); border:1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow);
+}
+.consulta-card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; }
+.consulta-codigo{ font-weight:700; font-size:15px; }
+.consulta-desc{ font-size:13px; color: var(--text-muted); margin-top:2px; }
+.consulta-grid{
+  display:grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; font-size:13px;
+  padding-top:10px; border-top:1px solid var(--border);
+}
+.consulta-grid .label{ display:block; font-size:11px; color: var(--text-muted); }
+.consulta-obs{ margin-top:10px; font-size:13px; font-style:italic; color: var(--text-muted); }
+.consulta-footer{ margin-top:10px; padding-top:8px; border-top:1px solid var(--border); font-size:11px; color: var(--text-muted); }
 .home-card[disabled]{ opacity:0.45; cursor:not-allowed; }
 
 @media (min-width: 560px){ .home-menu{ grid-template-columns: 1fr 1fr; } }

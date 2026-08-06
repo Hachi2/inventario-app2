@@ -26,7 +26,7 @@
    ========================================================= */
 
 const DB_NAME = "InventarioOfflineDB";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const DB = {
   _db: null,
@@ -48,6 +48,12 @@ const DB = {
         }
         if (!db.objectStoreNames.contains("config")) {
           db.createObjectStore("config", { keyPath: "clave" });
+        }
+        // "almacenes": cada fila del inventario pertenece a uno, para
+        // poder cargar varias bases de datos (por ejemplo, distintos
+        // depósitos) sin que se mezclen ni se borren entre sí.
+        if (!db.objectStoreNames.contains("almacenes")) {
+          db.createObjectStore("almacenes", { keyPath: "id" });
         }
 
         // "inventario" cambió de clave (antes CODIGO, ahora "_id" interno)
@@ -122,6 +128,17 @@ const DB = {
       const req = store.delete(key);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
+    });
+  },
+
+  async deleteMany(storeName, keys) {
+    if (keys.length === 0) return;
+    const db = await this.open();
+    const store = db.transaction(storeName, "readwrite").objectStore(storeName);
+    return new Promise((resolve, reject) => {
+      keys.forEach((k) => store.delete(k));
+      store.transaction.oncomplete = () => resolve();
+      store.transaction.onerror = (e) => reject(e.target.error);
     });
   },
 

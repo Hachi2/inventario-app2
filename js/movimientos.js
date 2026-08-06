@@ -284,6 +284,12 @@ const Movimientos = {
       actualizados.push(item);
     }
 
+    const ahora = new Date().toLocaleString("es");
+    actualizados.forEach((item) => {
+      item["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";
+      item["FECHA MODIFICACIÓN"] = ahora;
+    });
+
     await DB.bulkPut("inventario", actualizados);
     await Inventario.cargarDesdeDB();
     this.carrito = [];

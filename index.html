@@ -64,7 +64,16 @@
       <h1>Bienvenido, <span id="home-nombre">—</span></h1>
       <p>¿Qué deseas hacer?</p>
     </div>
+    <button id="btn-almacen-actual" class="almacen-pill">
+      <span class="nav-icon" id="almacen-pill-icon"></span>
+      <span id="almacen-pill-texto">Sin almacén cargado</span>
+      <span class="almacen-pill-cambiar">Cambiar ▾</span>
+    </button>
     <div class="home-menu">
+      <button class="home-card home-card-consulta" data-screen="consulta">
+        <span class="home-card-icon"></span>
+        <span class="home-card-label">Consulta</span>
+      </button>
       <button class="home-card home-card-entrada" data-screen="entrada">
         <span class="home-card-icon"></span>
         <span class="home-card-label">Entrada de almacén</span>
@@ -83,6 +92,17 @@
       </button>
     </div>
     <button id="btn-ayuda-inicio" class="help-link"><span class="icon"></span> ¿Cómo funciona la app?</button>
+  </main>
+
+  <!-- ---------- PANTALLA: CONSULTA (solo lectura) ---------- -->
+  <main id="view-consulta" class="view pushed-view">
+    <p id="consulta-sin-datos" class="muted small" style="text-align:center;margin-top:24px;" hidden>
+      Todavía no se cargó ningún almacén. Pide a tu Coordinador o Analista que cargue uno desde Ajustes.
+    </p>
+    <p id="consulta-vacio" class="muted small" style="text-align:center;margin-top:24px;">
+      Escribe un código, descripción, galpón, sistema o pedido/ítem para consultar.
+    </p>
+    <div id="consulta-resultados"></div>
   </main>
 
   <!-- ---------- PANTALLA: MOVIMIENTO (Entrada / Salida / Traspaso / Conteo) ---------- -->
@@ -131,11 +151,13 @@
   <main id="view-ajustes" class="view tab-view">
     <h2>Base de datos</h2>
     <div class="bg-controls">
+      <p class="muted small" id="bd-almacen">Ningún almacén cargado.</p>
       <p class="muted small" id="bd-estado">Todavía no se ha cargado el inventario.</p>
       <div class="logo-actions">
         <button id="btn-cargar-excel" class="btn btn-primary btn-sm">Cargar Excel</button>
         <button id="btn-descargar-excel" class="btn btn-secondary btn-sm">Descargar inventario</button>
       </div>
+      <button id="btn-cambiar-almacen-ajustes" class="btn btn-outline btn-block btn-sm" style="margin-top:8px;">Cambiar de almacén</button>
       <button id="btn-exportar-todo" class="btn btn-outline btn-block btn-sm" style="margin-top:8px;">Exportar todo lo realizado (Excel)</button>
     </div>
 
@@ -236,12 +258,31 @@
     <div class="modal-body">
       <p class="muted small">El archivo debe tener los encabezados: VOLUMEN MAESTRO, VOLUMENES INTERMEDIOS, CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL. INTERMEDIO, TOTAL PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO, OBSERVACIONES, CONTEO, ENTREGADO. Si el mismo CODIGO aparece en varias filas, se conservan todas (cada fila es un lote/stock distinto).</p>
       <label class="field">
+        <span>Nombre de este almacén</span>
+        <input type="text" id="import-almacen-nombre" list="lista-almacenes" placeholder="ej. Almacén Central, Depósito Norte...">
+        <datalist id="lista-almacenes"></datalist>
+      </label>
+      <p class="muted small">Si escribes el nombre de un almacén que ya existe, se reemplazan solo sus datos — los demás almacenes no se tocan. Si es un nombre nuevo, se crea aparte.</p>
+      <label class="field">
         <span>Archivo (.xlsx, .xls o .csv)</span>
         <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv">
       </label>
-      <p class="form-error" style="color:var(--danger, #C0392B);">⚠ Esto reemplaza todos los datos actuales por los del archivo. Si hay conteos, entregas o traspasos hechos desde la última carga, se perderán a menos que ya los hayas exportado.</p>
       <p id="import-status" class="muted small"></p>
-      <button id="btn-confirmar-import" class="btn btn-primary btn-block btn-lg">Cargar y reemplazar</button>
+      <button id="btn-confirmar-import" class="btn btn-primary btn-block btn-lg">Cargar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-almacenes" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Elegir almacén</h3>
+      <button class="icon-btn modal-close" data-close="modal-almacenes" aria-label="Cerrar"></button>
+    </div>
+    <div class="modal-body">
+      <p class="muted small">Cada almacén tiene su propia base de datos — cambiar aquí no modifica ni mezcla los demás.</p>
+      <div id="lista-almacenes-modal" class="user-list"></div>
+      <button id="btn-nuevo-almacen" class="btn btn-primary btn-block" style="margin-top:14px;">+ Cargar un almacén nuevo</button>
     </div>
   </div>
 </div>
@@ -292,11 +333,13 @@
       <button class="icon-btn modal-close" data-close="modal-ayuda" aria-label="Cerrar"></button>
     </div>
     <div class="modal-body ayuda-body">
+      <p><b>Consulta:</b> busca un artículo para ver todos sus datos. No modifica nada — úsala cuando solo necesites revisar información.</p>
       <p><b>Entrada de almacén:</b> usa esta opción cuando llega mercancía nueva. Busca el artículo, indica cuánto llegó y presiona Finalizar.</p>
       <p><b>Salida de almacén:</b> úsala cuando entregas o sacas mercancía. Busca el artículo, indica cuánto sale y presiona Finalizar.</p>
       <p><b>Traspaso:</b> úsala para mover artículos de un galpón a otro.</p>
       <p><b>Conteo físico:</b> úsala cuando cuentas la mercancía a mano. Busca el artículo, escribe cuánto contaste (y una observación si hace falta) y presiona Finalizar.</p>
-      <p><b>Registro:</b> ahí queda guardado quién hizo cada cambio y cuándo.</p>
+      <p><b>Registro:</b> ahí queda guardado quién hizo cada cambio y cuándo. Además, cada artículo guarda quién fue la última persona que lo modificó.</p>
+      <p><b>Almacenes:</b> si manejas más de un almacén (por ejemplo, distintos depósitos), cada uno tiene su propio Excel y sus propios datos — cámbialos desde el botón "Cambiar" en Inicio, sin que se mezclen entre sí.</p>
       <p class="muted small">Si tienes dudas, pídele ayuda a tu Coordinador.</p>
     </div>
   </div>
@@ -322,7 +365,9 @@
 <script src="js/db.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/theme.js"></script>
+<script src="js/almacenes.js"></script>
 <script src="js/inventario.js"></script>
+<script src="js/consulta.js"></script>
 <script src="js/movimientos.js"></script>
 <script src="js/auditoria.js"></script>
 <script src="js/usuarios.js"></script>

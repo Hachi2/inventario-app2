@@ -2,7 +2,7 @@
    app.js — arranque, navegación y wiring de eventos
    ========================================================= */
 
-let pantallaActual = "home"; // home | auditoria | usuarios | ajustes | inventario | movimiento
+let pantallaActual = "home"; // home | auditoria | usuarios | ajustes | movimiento | consulta
 
 function abrirModal(id) { document.getElementById(id).hidden = false; }
 function cerrarModal(id) { document.getElementById(id).hidden = true; }
@@ -35,7 +35,22 @@ function mostrarApp() {
   document.querySelector('[data-screen="traspaso"]').disabled = !Auth.isGestor();
 
   cambiarTab("home");
-  Inventario.cargarDesdeDB().then(actualizarEstadoBD);
+  cargarAlmacenActual();
+}
+
+async function cargarAlmacenActual() {
+  await Almacenes.listar();
+  await Almacenes.actual();
+  await Inventario.cargarDesdeDB();
+  actualizarPillAlmacen();
+  actualizarEstadoBD();
+}
+
+function actualizarPillAlmacen() {
+  const nombre = Almacenes.nombreActual();
+  document.getElementById("almacen-pill-texto").textContent = nombre
+    ? `Almacén: ${nombre}`
+    : (Almacenes.cacheLista.length === 0 ? "Sin almacén cargado — toca para cargar uno" : "Elige un almacén");
 }
 
 function cambiarTab(tab) {
@@ -88,9 +103,72 @@ function volverAInicio() {
   cambiarTab("home");
 }
 
+function abrirPantallaConsulta() {
+  pantallaActual = "consulta";
+  document.querySelectorAll(".tab-view, .pushed-view").forEach((v) => v.classList.remove("active"));
+  document.getElementById("view-consulta").classList.add("active");
+
+  document.getElementById("btn-header-back").hidden = false;
+  document.getElementById("header-logo").hidden = true;
+  document.getElementById("header-title").textContent = "Consulta";
+  const sub = document.getElementById("header-subtitle");
+  sub.textContent = "Solo consulta — no modifica nada.";
+  sub.hidden = false;
+  document.getElementById("header-search-row").hidden = false;
+  document.getElementById("search-input").value = "";
+  document.getElementById("btn-clear-search").hidden = true;
+  document.getElementById("header-actions").innerHTML = "";
+
+  document.getElementById("bottom-nav").hidden = true;
+  document.getElementById("bottom-actionbar").hidden = true;
+  Consulta.abrir();
+}
+
+/* -------- Selector de almacén -------- */
+function abrirModalAlmacenes() {
+  renderListaAlmacenes();
+  abrirModal("modal-almacenes");
+}
+
+function renderListaAlmacenes() {
+  const cont = document.getElementById("lista-almacenes-modal");
+  if (Almacenes.cacheLista.length === 0) {
+    cont.innerHTML = `<p class="muted small">Todavía no hay ningún almacén cargado.</p>`;
+    return;
+  }
+  cont.innerHTML = Almacenes.cacheLista.map((a) => `
+    <div class="user-item" data-id="${a.id}" style="cursor:pointer;${a.id === Almacenes.actualId ? "border:1px solid var(--accent);" : ""}">
+      <div>
+        <div class="u-name">${escapeHtml(a.nombre)}</div>
+        <div class="u-meta">${a.id === Almacenes.actualId ? "Almacén actual" : "Toca para usar este almacén"}</div>
+      </div>
+    </div>`).join("");
+
+  cont.querySelectorAll(".user-item").forEach((el) => {
+    el.addEventListener("click", async () => {
+      const id = el.dataset.id;
+      if (id === Almacenes.actualId) { cerrarModal("modal-almacenes"); return; }
+      await Almacenes.fijarActual(id);
+      await Inventario.cargarDesdeDB();
+      actualizarPillAlmacen();
+      actualizarEstadoBD();
+      cerrarModal("modal-almacenes");
+      mostrarToast(`Ahora estás en "${Almacenes.nombreActual()}"`);
+      if (pantallaActual === "consulta") Consulta.abrir();
+    });
+  });
+}
+
+function poblarDatalistAlmacenes() {
+  const dl = document.getElementById("lista-almacenes");
+  dl.innerHTML = Almacenes.cacheLista.map((a) => `<option value="${escapeHtml(a.nombre)}"></option>`).join("");
+}
+
 function abrirModalImport() {
   document.getElementById("import-status").textContent = "";
   document.getElementById("import-file-input").value = "";
+  document.getElementById("import-almacen-nombre").value = Almacenes.nombreActual() || "";
+  poblarDatalistAlmacenes();
   abrirModal("modal-import");
 }
 
@@ -122,10 +200,17 @@ async function exportarTodoExcel() {
 
 async function actualizarEstadoBD() {
   const estadoEl = document.getElementById("bd-estado");
+  const almacenEl = document.getElementById("bd-almacen");
   if (!estadoEl) return;
+
+  if (almacenEl) {
+    const nombre = Almacenes.nombreActual();
+    almacenEl.textContent = nombre ? `Almacén actual: ${nombre}` : "Ningún almacén cargado.";
+  }
+
   const n = Inventario.cache.length;
   if (n === 0) {
-    estadoEl.textContent = "Todavía no se ha cargado el inventario.";
+    estadoEl.textContent = Almacenes.actualId ? "Este almacén todavía no tiene datos cargados." : "Todavía no se ha cargado ningún inventario.";
   } else {
     const meta = Inventario.ultimaCarga;
     let cuando = "";
@@ -220,10 +305,25 @@ async function iniciar() {
 
   // -------- Tarjetas de Inicio --------
   document.querySelectorAll(".home-card").forEach((btn) => {
-    btn.addEventListener("click", () => abrirPantallaMovimiento(btn.dataset.screen));
+    btn.addEventListener("click", () => {
+      if (btn.dataset.screen === "consulta") abrirPantallaConsulta();
+      else abrirPantallaMovimiento(btn.dataset.screen);
+    });
   });
 
   document.getElementById("btn-ayuda-inicio").addEventListener("click", () => abrirModal("modal-ayuda"));
+
+  // -------- Selector de almacén --------
+  document.getElementById("btn-almacen-actual").addEventListener("click", abrirModalAlmacenes);
+  document.getElementById("btn-cambiar-almacen-ajustes").addEventListener("click", abrirModalAlmacenes);
+  document.getElementById("btn-nuevo-almacen").addEventListener("click", () => {
+    cerrarModal("modal-almacenes");
+    document.getElementById("import-almacen-nombre").value = "";
+    document.getElementById("import-file-input").value = "";
+    document.getElementById("import-status").textContent = "";
+    poblarDatalistAlmacenes();
+    abrirModal("modal-import");
+  });
 
   // -------- Botón "atrás" del encabezado --------
   document.getElementById("btn-header-back").addEventListener("click", volverAInicio);
@@ -233,6 +333,7 @@ async function iniciar() {
     const valor = e.target.value;
     document.getElementById("btn-clear-search").hidden = !valor;
     if (pantallaActual === "movimiento") Movimientos.buscar(valor);
+    else if (pantallaActual === "consulta") Consulta.buscar(valor);
   });
   document.getElementById("btn-clear-search").addEventListener("click", () => {
     const input = document.getElementById("search-input");
@@ -262,19 +363,28 @@ async function iniciar() {
   document.getElementById("btn-exportar-todo").addEventListener("click", () => exportarTodoExcel());
   document.getElementById("btn-confirmar-import").addEventListener("click", async () => {
     const input = document.getElementById("import-file-input");
+    const nombreInput = document.getElementById("import-almacen-nombre");
     const status = document.getElementById("import-status");
+    const nombre = nombreInput.value.trim();
+    if (!nombre) {
+      status.textContent = "Escribe un nombre para el almacén.";
+      return;
+    }
     if (!input.files[0]) {
       status.textContent = "Selecciona un archivo primero.";
       return;
     }
-    if (Inventario.cache.length > 0 && !confirm("Esto reemplazará todo el inventario actual por el contenido del archivo. ¿Continuar?")) {
+    const existente = await Almacenes.buscarPorNombre(nombre);
+    if (existente && !confirm(`Ya existe un almacén llamado "${nombre}". Esto reemplazará SOLO sus datos (los demás almacenes no se tocan). ¿Continuar?`)) {
       return;
     }
     status.textContent = "Cargando…";
     try {
-      const n = await Inventario.importarArchivo(input.files[0]);
-      status.textContent = `Listo: ${n} filas cargadas.`;
-      mostrarToast("Inventario actualizado");
+      const resultado = await Inventario.importarArchivo(input.files[0], nombre);
+      status.textContent = `Listo: ${resultado.n} filas cargadas en "${resultado.nombre}".`;
+      mostrarToast(resultado.esNuevo ? `Almacén "${resultado.nombre}" creado` : "Inventario actualizado");
+      await Almacenes.listar();
+      actualizarPillAlmacen();
       actualizarEstadoBD();
       setTimeout(() => cerrarModal("modal-import"), 700);
     } catch (err) {
@@ -365,10 +475,13 @@ async function iniciar() {
   document.querySelector('[data-close="modal-usuario"]').innerHTML = svgIcon("cerrar");
   document.querySelector('[data-close="modal-ayuda"]').innerHTML = svgIcon("cerrar");
   document.querySelector('[data-close="modal-scan"]').innerHTML = svgIcon("cerrar");
+  document.querySelector('[data-close="modal-almacenes"]').innerHTML = svgIcon("cerrar");
   document.querySelector(".home-card-entrada .home-card-icon").innerHTML = svgIcon("entrada");
   document.querySelector(".home-card-salida .home-card-icon").innerHTML = svgIcon("salida");
   document.querySelector(".home-card-traspaso .home-card-icon").innerHTML = svgIcon("traspaso");
   document.querySelector(".home-card-conteo .home-card-icon").innerHTML = svgIcon("conteo");
+  document.querySelector(".home-card-consulta .home-card-icon").innerHTML = svgIcon("buscar");
+  document.getElementById("almacen-pill-icon").innerHTML = ICONS.caja;
   document.querySelector("#btn-ayuda-inicio .icon").innerHTML = ICONS.ayuda;
   document.querySelector(".nav-btn[data-tab='home'] .nav-icon").innerHTML = ICONS.inicio;
   document.querySelector(".nav-btn[data-tab='auditoria'] .nav-icon").innerHTML = ICONS.lista;
