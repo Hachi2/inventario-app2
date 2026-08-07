@@ -189,11 +189,13 @@ async function exportarTodoExcel() {
   }
   const libro = XLSX.utils.book_new();
   const hojaInventario = XLSX.utils.json_to_sheet(Inventario.filasParaExportar());
-  XLSX.utils.book_append_sheet(libro, hojaInventario, "Inventario actual");
+  XLSX.utils.book_append_sheet(libro, hojaInventario, Inventario.nombreHojaAlmacen());
   const hojaRegistro = XLSX.utils.json_to_sheet(await Auditoria.filasParaExportar());
   XLSX.utils.book_append_sheet(libro, hojaRegistro, "Registro de actividad");
   const fecha = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(libro, `inventario_completo_${fecha}.xlsx`);
+  const nombreAlmacenArchivo = (Almacenes.nombreActual() || "inventario")
+    .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  XLSX.writeFile(libro, `inventario_completo_${nombreAlmacenArchivo}_${fecha}.xlsx`);
   await Auditoria.registrar("Exportación", null, "todo", "-", "descarga Excel (inventario + registro)");
   mostrarToast("Descargando Excel…");
 }
@@ -341,6 +343,11 @@ async function iniciar() {
     input.dispatchEvent(new Event("input"));
   });
   document.getElementById("btn-scan").addEventListener("click", () => Escaner.abrir());
+
+  // -------- Selector de tipo de traspaso (galpón / otro almacén) --------
+  document.querySelectorAll("#traspaso-tipo-toggle .segmented-btn").forEach((btn) => {
+    btn.addEventListener("click", () => Movimientos.setTraspasoModo(btn.dataset.modo));
+  });
 
   // -------- Modales genéricos --------
   document.querySelectorAll(".modal-close").forEach((btn) => {

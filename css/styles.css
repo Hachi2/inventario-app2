@@ -26,16 +26,16 @@
 
   --card-inventario-bg: #F6DE9E;
   --card-inventario-fg: #6B4A0E;
-  --card-entrada-bg: #B7E3C1;
-  --card-entrada-fg: #1E6B3B;
-  --card-salida-bg: #F5B8B2;
-  --card-salida-fg: #8C2E27;
-  --card-traspaso-bg: #B7CFF0;
-  --card-traspaso-fg: #234A85;
-  --card-conteo-bg: #DCCBF2;
-  --card-conteo-fg: #5A3690;
-  --card-consulta-bg: #B9E4E1;
-  --card-consulta-fg: #1C5C57;
+  --card-entrada-bg: #F7DE9E;
+  --card-entrada-fg: #7A5A0E;
+  --card-salida-bg: #F2BE94;
+  --card-salida-fg: #8A4A1E;
+  --card-traspaso-bg: #EFB07E;
+  --card-traspaso-fg: #7A430D;
+  --card-conteo-bg: #E9C9A0;
+  --card-conteo-fg: #6E4C22;
+  --card-consulta-bg: #F6EAD9;
+  --card-consulta-fg: #8A6A3C;
 }
 
 body[data-theme="dark"]{
@@ -51,19 +51,24 @@ body[data-theme="dark"]{
 
   --card-inventario-bg: #5B451C;
   --card-inventario-fg: #F6DE9E;
-  --card-entrada-bg: #24462F;
-  --card-entrada-fg: #B7E3C1;
-  --card-salida-bg: #59302B;
-  --card-salida-fg: #F5B8B2;
-  --card-traspaso-bg: #253B5C;
-  --card-traspaso-fg: #B7CFF0;
-  --card-conteo-bg: #3B2C54;
-  --card-conteo-fg: #DCCBF2;
-  --card-consulta-bg: #1F4A46;
-  --card-consulta-fg: #B9E4E1;
+  --card-entrada-bg: #4A3B12;
+  --card-entrada-fg: #F3D98F;
+  --card-salida-bg: #4A2C16;
+  --card-salida-fg: #F0BE94;
+  --card-traspaso-bg: #4A2A10;
+  --card-traspaso-fg: #EFAF7C;
+  --card-conteo-bg: #40301C;
+  --card-conteo-fg: #E7C79E;
+  --card-consulta-bg: #3A2E20;
+  --card-consulta-fg: #E8D9C0;
 }
 
 *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* El atributo hidden SIEMPRE debe ganar, sin importar qué otra clase
+   le haya fijado un display propio (evita que un elemento "oculto"
+   siga ocupando espacio o mostrándose por un empate de especificidad). */
+[hidden]{ display:none !important; }
 html,body{ height:100%; }
 body{
   margin:0;
@@ -257,6 +262,24 @@ input, select, textarea{ font-family: inherit; }
 .consulta-grid .label{ display:block; font-size:11px; color: var(--text-muted); }
 .consulta-obs{ margin-top:10px; font-size:13px; font-style:italic; color: var(--text-muted); }
 .consulta-footer{ margin-top:10px; padding-top:8px; border-top:1px solid var(--border); font-size:11px; color: var(--text-muted); }
+
+/* Cuadro de totales en Consulta — elemento nuevo, no altera .consulta-card */
+.consulta-resumen{
+  display:flex; gap:0; background: var(--surface); border:1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); margin: 10px 0 14px; overflow:hidden;
+}
+.consulta-resumen > div{ flex:1; text-align:center; padding:10px 6px; }
+.consulta-resumen > div + div{ border-left:1px solid var(--border); }
+.consulta-resumen .valor{ display:block; font-size:19px; font-weight:800; color: var(--accent); }
+.consulta-resumen .etiqueta{ display:block; font-size:11px; color: var(--text-muted); margin-top:2px; }
+
+/* Selector de tipo de traspaso (galpón / otro almacén) */
+.segmented{ display:flex; background: var(--surface-2); border-radius: var(--radius-sm); padding:3px; gap:3px; }
+.segmented-btn{
+  flex:1; border:none; background:none; padding:8px 6px; border-radius:7px;
+  font-size:13px; font-weight:600; color: var(--text-muted); cursor:pointer;
+}
+.segmented-btn.active{ background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 .home-card[disabled]{ opacity:0.45; cursor:not-allowed; }
 
 @media (min-width: 560px){ .home-menu{ grid-template-columns: 1fr 1fr; } }

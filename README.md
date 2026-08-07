@@ -1,31 +1,55 @@
-# Inventario Offline — instrucciones (v3)
+# Inventario Offline — instrucciones (v4)
 
 App web instalable (PWA): se agrega a la pantalla de inicio del teléfono
 como una app más y funciona **sin internet** en el día a día.
 
 ## Novedades de esta versión
 
-- **Varios almacenes independientes (nuevo):** ahora puedes cargar más de
-  un Excel, cada uno con el nombre de almacén que tú elijas (por ejemplo
-  "Almacén Central", "Depósito Norte"). Sus datos **nunca se mezclan** —
-  cambiar de almacén, o hacer una Entrada/Salida/Traspaso/Conteo, solo
-  afecta al almacén que tengas seleccionado en ese momento. El botón con el
-  nombre del almacén actual está arriba de la pantalla de Inicio; tócalo
-  para cambiar de almacén o cargar uno nuevo.
-- **Pantalla de Consulta (nueva):** para buscar y ver la información
-  completa de un artículo **sin modificar nada** — pensada para cuando solo
-  necesitas revisar datos, no hacer un movimiento. La barra de búsqueda ya
-  no aparece al entrar a la app; ahora vive únicamente dentro de Consulta y
-  dentro de Entrada/Salida/Traspaso/Conteo (para buscar qué artículo mover).
-- **Columna "USUARIO" y "FECHA MODIFICACIÓN" (nueva):** cada vez que alguien
-  hace una Entrada, Salida, Traspaso o Conteo sobre un artículo, esas dos
-  columnas se actualizan automáticamente en ese artículo con quién lo hizo y
-  cuándo — se ven en Consulta y quedan incluidas cuando descargas el Excel.
-  Esto es aparte del Registro de actividad general, que sigue llevando el
-  historial completo de todos los cambios.
+- **Consulta ahora suma las coincidencias (nuevo):** si buscas un código que
+  aparece en varios lotes/galpones, arriba de los resultados aparece un
+  cuadro con el total de coincidencias, la suma de **Total piezas** y la
+  suma de **Stock final** de todo lo que encontró — así ves de un vistazo
+  cuánto hay en total de ese artículo, sin sumar a mano.
+- **Traspaso entre almacenes distintos (nuevo):** además de mover un
+  artículo de un galpón a otro (dentro del mismo almacén), ahora puedes
+  elegir "Traspaso entre almacenes" para mover cantidad de un almacén hacia
+  otro almacén cargado en la app — resta del origen, suma en el destino (o
+  crea el artículo ahí si no existía), y ninguno de los dos almacenes se ve
+  afectado más allá de esa cantidad exacta.
+- **Nuevos campos en Entrada, Salida y Traspaso:** ahora se pide el
+  **nombre y apellido** de quien trae o retira el material, el
+  **departamento que solicita**, y en Traspaso además **quién autoriza**.
+  La fecha y hora quedan registradas solas, sin que tengas que escribirlas.
+  Todo esto se guarda en columnas nuevas del Excel de ese almacén:
+  `PERSONA`, `DEPARTAMENTO`, `TRASPASO` y `AUTORIZADO POR`.
+- **Varios almacenes independientes:** puedes cargar más de un Excel, cada
+  uno con el nombre de almacén que tú elijas (por ejemplo "Almacén
+  Central", "Depósito Norte"). Sus datos **nunca se mezclan** — cambiar de
+  almacén, o hacer una Entrada/Salida/Traspaso/Conteo, solo afecta al
+  almacén que tengas seleccionado en ese momento. El botón con el nombre
+  del almacén actual está arriba de la pantalla de Inicio; tócalo para
+  cambiar de almacén o cargar uno nuevo.
+- **Pantalla de Consulta:** para buscar y ver la información completa de un
+  artículo **sin modificar nada** — pensada para cuando solo necesitas
+  revisar datos, no hacer un movimiento. La barra de búsqueda ya no aparece
+  al entrar a la app; ahora vive únicamente dentro de Consulta y dentro de
+  Entrada/Salida/Traspaso/Conteo (para buscar qué artículo mover).
+- **Columna "USUARIO" y "FECHA MODIFICACIÓN":** cada vez que alguien hace
+  una Entrada, Salida, Traspaso o Conteo sobre un artículo, esas dos
+  columnas (al final de la tabla) se actualizan automáticamente con quién
+  lo hizo y cuándo — se ven en Consulta y quedan incluidas cuando descargas
+  el Excel. Esto es aparte del Registro de actividad general, que sigue
+  llevando el historial completo de todos los cambios.
+- **Descargar Excel con el nombre del almacén:** tanto el archivo
+  (`inventario_almacen-central_2026-08-07.xlsx`) como el nombre de la
+  pestaña dentro del Excel llevan el nombre del almacén que estás
+  exportando, para no confundirlos si manejas varios.
+- **Colores cálidos:** las 5 tarjetas de Inicio (Consulta, Entrada, Salida,
+  Traspaso, Conteo) usan una paleta de tonos ámbar/terracota, ninguno
+  oscuro — en cuanto me pases tu logo, ajusto los tonos exactos para que
+  combinen con él.
 - **Pantalla de inicio rediseñada**, con saludo personal y botones grandes
-  de colores: Consulta, Entrada de almacén, Salida de almacén, Traspaso y
-  Conteo físico.
+  de colores.
 - **Logo de la empresa**: se sube una sola vez desde Ajustes y aparece
   automáticamente en la pantalla de inicio de sesión y en el encabezado de
   la app. El mismo logo se puede usar como imagen de fondo con un botón.
@@ -33,16 +57,6 @@ como una app más y funciona **sin internet** en el día a día.
   Excel (distintos lotes o galpones), la búsqueda ahora muestra **todas**
   las coincidencias por separado — como el filtro de Excel — en vez de
   quedarse con una sola.
-- **Entrada de almacén**: para registrar mercancía que llega. Suma la
-  cantidad al `TOTAL PIEZAS` del artículo.
-- **Salida de almacén**: para registrar mercancía que sale. Suma la
-  cantidad al `ENTREGADO` del artículo (disponible también para el rol
-  Auxiliar).
-- **Traspaso**: mueve un artículo de un galpón a otro.
-- **Conteo físico**: para cuando cuentas la mercancía a mano. Busca el
-  artículo, escribe la cantidad contada (reemplaza el `CONTEO` anterior, no
-  lo suma) y, si quieres, deja una observación. Disponible también para el
-  rol Auxiliar.
 - **Exportar todo lo realizado**: en Ajustes hay un botón para descargar un
   Excel con dos pestañas — el inventario actual y el registro completo de
   movimientos — además de la descarga simple del inventario.
@@ -98,7 +112,10 @@ carpeta completa.
    INTERMEDIO, TOTAL PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO,
    OBSERVACIONES, CONTEO, ENTREGADO`. Ese archivo pasa a ser la base de
    datos de ese almacén — el CODIGO puede repetirse si tienes varios lotes
-   del mismo artículo, no hay problema.
+   del mismo artículo, no hay problema. No hace falta que agregues las
+   columnas `PERSONA`, `DEPARTAMENTO`, `TRASPASO`, `AUTORIZADO POR`,
+   `USUARIO` ni `FECHA MODIFICACIÓN` — la app las crea y las llena sola a
+   medida que se usan.
 5. **¿Tienes más de un almacén?** Repite el paso 4 con otro nombre (por
    ejemplo "Depósito Norte") — queda guardado aparte, sin tocar el primero.
    Para cambiar entre ellos, toca el botón del almacén arriba de Inicio en
@@ -109,16 +126,26 @@ carpeta completa.
 
 - **Consulta:** busca un artículo (por código, descripción, galpón, sistema
   o pedido/ítem) para ver toda su información, incluido quién fue la última
-  persona que lo modificó. No cambia nada — es de solo lectura, disponible
-  para cualquier rol.
-- **Entrada de almacén:** cuando llega mercancía. Busca el artículo,
-  escribe cuánto llegó, tócalo para agregarlo a la lista de trabajo y
-  repite con todos los artículos que quieras. Al final, presiona
-  **Finalizar** para aplicar todo junto (o **Limpiar lista** para
-  descartar sin guardar nada).
-- **Salida de almacén:** igual que Entrada, pero para lo que sale.
-- **Traspaso:** además de buscar el artículo, indica a qué galpón se
-  mueve antes de agregarlo a la lista.
+  persona que lo modificó. Si hay varias coincidencias del mismo artículo
+  (distintos lotes), arriba se ve el total sumado. No cambia nada — es de
+  solo lectura, disponible para cualquier rol.
+- **Entrada de almacén:** cuando llega mercancía. Escribe el nombre y
+  apellido de quien la trae y el departamento que la solicita, busca el
+  artículo, indica cuánto llegó y agrégalo a la lista. Repite con todos los
+  artículos que quieras y presiona **Finalizar** para aplicar todo junto
+  (o **Limpiar lista** para descartar sin guardar nada).
+- **Salida de almacén:** igual que Entrada, pero con el nombre de quien
+  retira el material.
+- **Traspaso:** tiene dos modalidades, con un selector arriba de la
+  pantalla:
+  - **Entre galpones** (la de siempre): mueve el artículo de un galpón a
+    otro dentro del mismo almacén.
+  - **Entre almacenes** (nueva): mueve una cantidad del artículo hacia
+    *otro almacén* de los que tengas cargados en la app — resta esa
+    cantidad del almacén actual y la suma en el almacén destino (creando
+    el artículo ahí si todavía no existía). El resto de cada almacén no se
+    toca.
+  En ambos casos se pide quién autoriza el traspaso.
 - **Conteo físico:** busca el artículo, escribe la cantidad que contaste a
   mano (esto **reemplaza** el conteo anterior, no lo suma) y, si hace
   falta, deja una observación — por ejemplo "faltan 5 por revisar". Al
@@ -126,17 +153,17 @@ carpeta completa.
 
 Todas las pantallas anteriores (menos Consulta) actualizan automáticamente
 las columnas **USUARIO** y **FECHA MODIFICACIÓN** del artículo que tocaste,
-con tu usuario y la fecha/hora — así queda registrado directamente en los
-datos, sin que tengas que hacer nada extra.
+con tu usuario (el que iniciaste sesión) y la fecha/hora — así queda
+registrado directamente en los datos, sin que tengas que hacer nada extra.
 
-> **Nota honesta sobre Traspaso:** en esta versión cada código de artículo
-> vive en un único galpón a la vez (no se reparte el mismo código entre dos
-> galpones). Por eso un traspaso mueve el artículo completo a su nuevo
-> galpón; la cantidad que escribes queda guardada como referencia en el
-> registro de actividad, pero no "divide" el stock entre dos ubicaciones. Si
-> más adelante necesitas manejar el mismo código en varios galpones a la
-> vez con cantidades independientes, es un cambio de estructura de datos
-> más grande — avísame si quieres que lo evaluemos.
+> **Nota sobre Traspaso "entre galpones":** en esa modalidad, cada código de
+> artículo vive en un único galpón a la vez dentro del almacén (no se
+> reparte el mismo código entre dos galpones). Si necesitas manejar el
+> mismo código en varios galpones del mismo almacén a la vez con
+> cantidades independientes, es un cambio de estructura de datos más
+> grande — avísame si quieres que lo evaluemos. La modalidad "entre
+> almacenes" sí divide cantidades libremente, porque cada almacén es una
+> base de datos separada.
 
 ## Sobre el botón de escanear (📷)
 
@@ -153,11 +180,12 @@ u otra imagen) con una barra para controlar la transparencia.
 
 ## Preguntas frecuentes
 
-**¿Puedo cambiar los colores de las 4 tarjetas de Inicio?**
+**¿Puedo cambiar los colores de las 5 tarjetas de Inicio?**
 Sí — están definidos como variables al principio de `css/styles.css`
-(`--card-entrada-bg`, `--card-salida-bg`, `--card-traspaso-bg`,
-`--card-conteo-bg`, y su versión `-fg` para el color del texto), fáciles de
-ajustar a los colores de tu marca.
+(`--card-consulta-bg`, `--card-entrada-bg`, `--card-salida-bg`,
+`--card-traspaso-bg`, `--card-conteo-bg`, y su versión `-fg` para el color
+del texto). Ahora mismo son tonos cálidos ámbar/terracota; en cuanto me
+compartas tu logo, te dejo los tonos ajustados a él.
 
 **¿Y si no tengo forma de subir esto a GitHub?**
 Dímelo y preparamos otra vía, o te guío paso a paso con capturas.

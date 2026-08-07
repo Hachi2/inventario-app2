@@ -102,15 +102,41 @@
     <p id="consulta-vacio" class="muted small" style="text-align:center;margin-top:24px;">
       Escribe un código, descripción, galpón, sistema o pedido/ítem para consultar.
     </p>
+    <div id="consulta-resumen" class="consulta-resumen" hidden></div>
     <div id="consulta-resultados"></div>
   </main>
 
   <!-- ---------- PANTALLA: MOVIMIENTO (Entrada / Salida / Traspaso / Conteo) ---------- -->
   <main id="view-movimiento" class="view pushed-view">
+    <div id="mov-persona-wrap" class="field" hidden>
+      <span id="mov-persona-label">Nombre y apellido</span>
+      <input type="text" id="mov-persona" placeholder="ej. Juan Pérez">
+    </div>
+    <div id="mov-departamento-wrap" class="field" hidden>
+      <span>Departamento que solicita</span>
+      <input type="text" id="mov-departamento" placeholder="ej. Producción">
+    </div>
+
+    <div id="mov-traspaso-tipo-wrap" class="field" hidden>
+      <span>Tipo de traspaso</span>
+      <div class="segmented" id="traspaso-tipo-toggle">
+        <button type="button" class="segmented-btn active" data-modo="galpon">Cambiar de galpón</button>
+        <button type="button" class="segmented-btn" data-modo="almacen">Enviar a otro almacén</button>
+      </div>
+    </div>
     <div id="mov-destino-wrap" class="field" hidden>
       <span>Galpón de destino</span>
       <input type="text" id="mov-destino-galpon" placeholder="ej. G3">
     </div>
+    <div id="mov-destino-almacen-wrap" class="field" hidden>
+      <span>Almacén de destino</span>
+      <select id="mov-destino-almacen"></select>
+    </div>
+    <div id="mov-autorizado-wrap" class="field" hidden>
+      <span>Autorizado por</span>
+      <input type="text" id="mov-autorizado-por" placeholder="Nombre y apellido">
+    </div>
+
     <div id="mov-sugerencias" class="suggestion-list"></div>
     <p id="mov-sin-datos" class="muted small" style="text-align:center;margin-top:24px;" hidden>
       Todavía no se cargó el inventario. Pide a tu Coordinador o Analista que lo cargue desde <b>Ajustes → Base de datos</b>.
@@ -333,10 +359,10 @@
       <button class="icon-btn modal-close" data-close="modal-ayuda" aria-label="Cerrar"></button>
     </div>
     <div class="modal-body ayuda-body">
-      <p><b>Consulta:</b> busca un artículo para ver todos sus datos. No modifica nada — úsala cuando solo necesites revisar información.</p>
-      <p><b>Entrada de almacén:</b> usa esta opción cuando llega mercancía nueva. Busca el artículo, indica cuánto llegó y presiona Finalizar.</p>
-      <p><b>Salida de almacén:</b> úsala cuando entregas o sacas mercancía. Busca el artículo, indica cuánto sale y presiona Finalizar.</p>
-      <p><b>Traspaso:</b> úsala para mover artículos de un galpón a otro.</p>
+      <p><b>Consulta:</b> busca un artículo para ver todos sus datos. Si hay varias coincidencias (por ejemplo, el mismo código en distintos lotes), arriba aparece un cuadro con el total sumado. No modifica nada — úsala cuando solo necesites revisar información.</p>
+      <p><b>Entrada de almacén:</b> usa esta opción cuando llega mercancía nueva. Indica quién la trae y de qué departamento, busca el artículo, indica cuánto llegó y presiona Finalizar.</p>
+      <p><b>Salida de almacén:</b> úsala cuando entregas o sacas mercancía. Indica quién la retira y de qué departamento, busca el artículo, indica cuánto sale y presiona Finalizar.</p>
+      <p><b>Traspaso:</b> mueve un artículo de un galpón a otro dentro del mismo almacén, o envíalo a otro almacén distinto (elige el tipo arriba). Siempre pide quién autoriza el traspaso.</p>
       <p><b>Conteo físico:</b> úsala cuando cuentas la mercancía a mano. Busca el artículo, escribe cuánto contaste (y una observación si hace falta) y presiona Finalizar.</p>
       <p><b>Registro:</b> ahí queda guardado quién hizo cada cambio y cuándo. Además, cada artículo guarda quién fue la última persona que lo modificó.</p>
       <p><b>Almacenes:</b> si manejas más de un almacén (por ejemplo, distintos depósitos), cada uno tiene su propio Excel y sus propios datos — cámbialos desde el botón "Cambiar" en Inicio, sin que se mezclen entre sí.</p>

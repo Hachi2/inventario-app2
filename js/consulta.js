@@ -9,21 +9,25 @@ const Consulta = {
   abrir() {
     document.getElementById("consulta-sin-datos").hidden = Inventario.cache.length !== 0;
     document.getElementById("consulta-resultados").innerHTML = "";
+    document.getElementById("consulta-resumen").hidden = true;
     document.getElementById("consulta-vacio").hidden = Inventario.cache.length === 0;
   },
 
   buscar(texto) {
     const cont = document.getElementById("consulta-resultados");
     const vacio = document.getElementById("consulta-vacio");
+    const resumen = document.getElementById("consulta-resumen");
     const q = normalizarTexto(texto);
 
     if (Inventario.cache.length === 0) {
       cont.innerHTML = "";
+      resumen.hidden = true;
       vacio.hidden = true;
       return;
     }
     if (!q) {
       cont.innerHTML = "";
+      resumen.hidden = true;
       vacio.hidden = false;
       vacio.textContent = "Escribe un código, descripción, galpón, sistema o pedido/ítem para consultar.";
       return;
@@ -35,17 +39,29 @@ const Consulta = {
 
     if (resultados.length === 0) {
       cont.innerHTML = "";
+      resumen.hidden = true;
       vacio.hidden = false;
       vacio.textContent = `Sin coincidencias para "${texto}".`;
       return;
     }
     vacio.hidden = true;
 
+    // Cuadro con la suma de todas las coincidencias (como pidió: "sume toda
+    // la coincidencia de ese ítem"), sin importar cuántas filas/lotes sean.
+    const totalPiezas = resultados.reduce((s, it) => s + (Number(it["TOTAL PIEZAS"]) || 0), 0);
+    const totalStock = resultados.reduce((s, it) => s + (Number(it["STOCK FINAL"]) || 0), 0);
+    resumen.hidden = false;
+    resumen.innerHTML = `
+      <div><span class="valor">${resultados.length}</span><span class="etiqueta">${resultados.length === 1 ? "Coincidencia" : "Coincidencias"}</span></div>
+      <div><span class="valor">${totalPiezas.toLocaleString("es")}</span><span class="etiqueta">Total piezas</span></div>
+      <div><span class="valor">${totalStock.toLocaleString("es")}</span><span class="etiqueta">Stock final</span></div>
+    `;
+
     const MAX = 60;
     const mostrar = resultados.slice(0, MAX);
     const aviso = resultados.length > MAX
       ? `<p class="muted small" style="padding:2px 2px 6px;">Mostrando ${MAX} de ${resultados.length} — sigue escribiendo para afinar.</p>`
-      : `<p class="muted small" style="padding:2px 2px 6px;">${resultados.length} coincidencia${resultados.length === 1 ? "" : "s"}</p>`;
+      : "";
 
     cont.innerHTML = aviso + mostrar.map((item) => this._cardHTML(item, texto)).join("");
   },

@@ -84,6 +84,10 @@ const Inventario = {
       });
       item["CODIGO"] = String(fila[codigoKey]).trim();
       item["STOCK FINAL"] = calcularStockFinal(item);
+      item["PERSONA"] = "";
+      item["DEPARTAMENTO"] = "";
+      item["TRASPASO"] = "";
+      item["AUTORIZADO POR"] = "";
       item["USUARIO"] = "";
       item["FECHA MODIFICACIÓN"] = "";
       item["_almacenId"] = almacenId;
@@ -106,7 +110,7 @@ const Inventario = {
 
   /* ---------------- Exportar ---------------- */
   filasParaExportar() {
-    const encabezados = [...COLUMNAS, "STOCK FINAL", "USUARIO", "FECHA MODIFICACIÓN"];
+    const encabezados = [...COLUMNAS, "STOCK FINAL", "PERSONA", "DEPARTAMENTO", "TRASPASO", "AUTORIZADO POR", "USUARIO", "FECHA MODIFICACIÓN"];
     return this.cache.map((item) => {
       const fila = {};
       encabezados.forEach((col) => (fila[col] = item[col] ?? ""));
@@ -114,11 +118,17 @@ const Inventario = {
     });
   },
 
+  nombreHojaAlmacen() {
+    const nombre = Almacenes.nombreActual() || "Inventario";
+    // Los nombres de hoja de Excel no admiten : \ / ? * [ ] y tienen máximo 31 caracteres
+    return nombre.replace(/[:\\/?*[\]]/g, "").slice(0, 31) || "Inventario";
+  },
+
   exportarExcel() {
-    const encabezados = [...COLUMNAS, "STOCK FINAL", "USUARIO", "FECHA MODIFICACIÓN"];
+    const encabezados = [...COLUMNAS, "STOCK FINAL", "PERSONA", "DEPARTAMENTO", "TRASPASO", "AUTORIZADO POR", "USUARIO", "FECHA MODIFICACIÓN"];
     const hoja = XLSX.utils.json_to_sheet(this.filasParaExportar(), { header: encabezados });
     const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, "Inventario");
+    XLSX.utils.book_append_sheet(libro, hoja, this.nombreHojaAlmacen());
     const fecha = new Date().toISOString().slice(0, 10);
     const nombreAlmacen = (Almacenes.nombreActual() || "inventario")
       .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");

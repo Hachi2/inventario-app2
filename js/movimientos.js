@@ -23,6 +23,8 @@ const MOVIMIENTOS_CONFIG = {
     etiquetaCantidad: "Cantidad que entra",
     accion: "Entrada",
     soloGestor: true,
+    pidePersona: true,
+    personaLabel: "Nombre y apellido de quien trae el material",
   },
   salida: {
     titulo: "Salida de almacén",
@@ -30,13 +32,16 @@ const MOVIMIENTOS_CONFIG = {
     etiquetaCantidad: "Cantidad que sale",
     accion: "Salida",
     soloGestor: false,
+    pidePersona: true,
+    personaLabel: "Nombre y apellido de quien retira el material",
   },
   traspaso: {
-    titulo: "Traspaso entre galpones",
-    ayuda: "Busca el artículo, indica a qué galpón se mueve y la cantidad de referencia.",
+    titulo: "Traspaso",
+    ayuda: "Busca el artículo, indica a dónde se mueve y la cantidad.",
     etiquetaCantidad: "Cantidad que se traspasa",
     accion: "Traspaso",
     soloGestor: true,
+    pideAutorizado: true,
   },
   conteo: {
     titulo: "Conteo físico",
@@ -72,12 +77,43 @@ const Movimientos = {
     }
     this.tipoActual = tipo;
     this.carrito = [];
+    const cfg = MOVIMIENTOS_CONFIG[tipo];
+
+    document.getElementById("mov-persona-wrap").hidden = !cfg.pidePersona;
+    document.getElementById("mov-persona-label").textContent = cfg.personaLabel || "Nombre y apellido";
+    document.getElementById("mov-persona").value = "";
+    document.getElementById("mov-departamento-wrap").hidden = !cfg.pidePersona;
+    document.getElementById("mov-departamento").value = "";
+
+    document.getElementById("mov-traspaso-tipo-wrap").hidden = tipo !== "traspaso";
+    document.getElementById("mov-autorizado-wrap").hidden = !cfg.pideAutorizado;
+    document.getElementById("mov-autorizado-por").value = "";
+    this.traspasoModo = "galpon";
+    document.querySelectorAll("#traspaso-tipo-toggle .segmented-btn").forEach((b) => b.classList.toggle("active", b.dataset.modo === "galpon"));
     document.getElementById("mov-destino-wrap").hidden = tipo !== "traspaso";
     document.getElementById("mov-destino-galpon").value = "";
+    document.getElementById("mov-destino-almacen-wrap").hidden = true;
+    this._poblarSelectAlmacenes();
+
     document.getElementById("mov-sugerencias").innerHTML = "";
     document.getElementById("mov-sin-datos").hidden = Inventario.cache.length !== 0;
     this.render();
     return true;
+  },
+
+  _poblarSelectAlmacenes() {
+    const sel = document.getElementById("mov-destino-almacen");
+    const otros = Almacenes.cacheLista.filter((a) => a.id !== Almacenes.actualId);
+    sel.innerHTML = otros.length
+      ? otros.map((a) => `<option value="${a.id}">${escapeHtml(a.nombre)}</option>`).join("")
+      : `<option value="">No hay otro almacén cargado todavía</option>`;
+  },
+
+  setTraspasoModo(modo) {
+    this.traspasoModo = modo;
+    document.querySelectorAll("#traspaso-tipo-toggle .segmented-btn").forEach((b) => b.classList.toggle("active", b.dataset.modo === modo));
+    document.getElementById("mov-destino-wrap").hidden = modo !== "galpon";
+    document.getElementById("mov-destino-almacen-wrap").hidden = modo !== "almacen";
   },
 
   /* ---------------- Búsqueda: muestra TODAS las coincidencias ---------------- */
@@ -166,12 +202,19 @@ const Movimientos = {
       return;
     }
     let destino;
-    if (this.tipoActual === "traspaso") {
+    if (this.tipoActual === "traspaso" && this.traspasoModo === "galpon") {
       destino = document.getElementById("mov-destino-galpon").value.trim();
       if (!destino) {
         mostrarToast("Indica el galpón de destino");
         return;
       }
+    } else if (this.tipoActual === "traspaso" && this.traspasoModo === "almacen") {
+      const sel = document.getElementById("mov-destino-almacen");
+      if (!sel.value) {
+        mostrarToast("No hay otro almacén cargado para traspasar");
+        return;
+      }
+      destino = sel.options[sel.selectedIndex].textContent;
     }
     let nota;
     if (cfg.permiteNota) {
@@ -249,7 +292,36 @@ const Movimientos = {
       return;
     }
     const cfg = MOVIMIENTOS_CONFIG[this.tipoActual];
+
+    // -------- Validaciones de los campos que aplican a toda la lista --------
+    let persona = "", departamento = "", autorizadoPor = "";
+    if (cfg.pidePersona) {
+      persona = document.getElementById("mov-persona").value.trim();
+      departamento = document.getElementById("mov-departamento").value.trim();
+      if (!persona) {
+        mostrarToast(`Escribe el ${cfg.personaLabel.toLowerCase()}`);
+        return;
+      }
+      if (!departamento) {
+        mostrarToast("Escribe el departamento que solicita");
+        return;
+      }
+    }
+    if (cfg.pideAutorizado) {
+      autorizadoPor = document.getElementById("mov-autorizado-por").value.trim();
+      if (!autorizadoPor) {
+        mostrarToast("Escribe quién autoriza el traspaso");
+        return;
+      }
+      if (this.traspasoModo === "almacen" && !document.getElementById("mov-destino-almacen").value) {
+        mostrarToast("No hay otro almacén cargado para traspasar — carga uno primero en Ajustes");
+        return;
+      }
+    }
+
     const actualizados = [];
+    const ahora = new Date().toLocaleString("es");
+    const nombreOrigen = Almacenes.nombreActual();
 
     for (const linea of this.carrito) {
       const item = Inventario.cache.find((i) => i._id === linea.id);
@@ -260,16 +332,24 @@ const Movimientos = {
         const antes = Number(item["TOTAL PIEZAS"]) || 0;
         item["TOTAL PIEZAS"] = antes + linea.cantidad;
         item["STOCK FINAL"] = calcularStockFinal(item);
-        await Auditoria.registrar("Entrada", ref, "TOTAL PIEZAS", antes, item["TOTAL PIEZAS"]);
+        item["PERSONA"] = persona;
+        item["DEPARTAMENTO"] = departamento;
+        await Auditoria.registrar("Entrada", ref, "TOTAL PIEZAS", antes, `${item["TOTAL PIEZAS"]} (trajo: ${persona}, ${departamento})`);
       } else if (this.tipoActual === "salida") {
         const antes = item["ENTREGADO"] === "" || item["ENTREGADO"] == null ? 0 : Number(item["ENTREGADO"]);
         item["ENTREGADO"] = antes + linea.cantidad;
         item["STOCK FINAL"] = calcularStockFinal(item);
-        await Auditoria.registrar("Salida", ref, "ENTREGADO", antes, item["ENTREGADO"]);
-      } else if (this.tipoActual === "traspaso") {
+        item["PERSONA"] = persona;
+        item["DEPARTAMENTO"] = departamento;
+        await Auditoria.registrar("Salida", ref, "ENTREGADO", antes, `${item["ENTREGADO"]} (retira: ${persona}, ${departamento})`);
+      } else if (this.tipoActual === "traspaso" && this.traspasoModo === "galpon") {
         const antes = item["GALPÓN"];
         item["GALPÓN"] = linea.destino;
-        await Auditoria.registrar("Traspaso", ref, "GALPÓN", antes, `${linea.destino} (${linea.cantidad} uds)`);
+        item["TRASPASO"] = `Cambió de galpón: "${antes || "—"}" → "${linea.destino}" · ${linea.cantidad} uds · ${ahora}`;
+        item["AUTORIZADO POR"] = autorizadoPor;
+        await Auditoria.registrar("Traspaso", ref, "GALPÓN", antes, `${linea.destino} (${linea.cantidad} uds, autorizó: ${autorizadoPor})`);
+      } else if (this.tipoActual === "traspaso" && this.traspasoModo === "almacen") {
+        await this._traspasarAOtroAlmacen(item, linea, autorizadoPor, ahora, nombreOrigen, ref);
       } else if (this.tipoActual === "conteo") {
         const antes = item["CONTEO"] === "" || item["CONTEO"] == null ? "" : item["CONTEO"];
         item["CONTEO"] = linea.cantidad;
@@ -281,14 +361,10 @@ const Movimientos = {
           await Auditoria.registrar("Conteo", ref, "OBSERVACIONES", notaAntes, linea.nota);
         }
       }
-      actualizados.push(item);
-    }
-
-    const ahora = new Date().toLocaleString("es");
-    actualizados.forEach((item) => {
       item["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";
       item["FECHA MODIFICACIÓN"] = ahora;
-    });
+      actualizados.push(item);
+    }
 
     await DB.bulkPut("inventario", actualizados);
     await Inventario.cargarDesdeDB();
@@ -296,6 +372,53 @@ const Movimientos = {
     this.render();
     mostrarToast(`${cfg.accion} registrada`);
     volverAInicio();
+  },
+
+  /* Mueve una cantidad de la fila actual (almacén de origen) hacia una
+     fila equivalente en OTRO almacén — dos bases de datos separadas, así
+     que no se toca nada del resto de ese otro almacén, solo se suma la
+     cantidad a su artículo (o se crea si no existía todavía). */
+  async _traspasarAOtroAlmacen(item, linea, autorizadoPor, ahora, nombreOrigen, ref) {
+    const almacenDestinoId = document.getElementById("mov-destino-almacen").value;
+    const almacenDestino = Almacenes.cacheLista.find((a) => a.id === almacenDestinoId);
+    if (!almacenDestino) return;
+
+    const antes = Number(item["TOTAL PIEZAS"]) || 0;
+    item["TOTAL PIEZAS"] = Math.max(0, antes - linea.cantidad);
+    item["STOCK FINAL"] = calcularStockFinal(item);
+    item["TRASPASO"] = `Salió hacia "${almacenDestino.nombre}" · ${linea.cantidad} uds · ${ahora}`;
+    item["AUTORIZADO POR"] = autorizadoPor;
+
+    const todos = await DB.getAll("inventario");
+    const existente = todos.find((r) => r._almacenId === almacenDestinoId && r.CODIGO === item.CODIGO);
+    const notaEntrada = `Entró desde "${nombreOrigen}" · ${linea.cantidad} uds · ${ahora}`;
+
+    if (existente) {
+      const antesDestino = Number(existente["TOTAL PIEZAS"]) || 0;
+      existente["TOTAL PIEZAS"] = antesDestino + linea.cantidad;
+      existente["STOCK FINAL"] = calcularStockFinal(existente);
+      existente["TRASPASO"] = notaEntrada;
+      existente["AUTORIZADO POR"] = autorizadoPor;
+      existente["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";
+      existente["FECHA MODIFICACIÓN"] = ahora;
+      await DB.put("inventario", existente);
+    } else {
+      const nueva = { ...item };
+      delete nueva._id;
+      nueva._almacenId = almacenDestinoId;
+      nueva["TOTAL PIEZAS"] = linea.cantidad;
+      nueva["CONTEO"] = "";
+      nueva["ENTREGADO"] = 0;
+      nueva["STOCK FINAL"] = linea.cantidad;
+      nueva["TRASPASO"] = notaEntrada;
+      nueva["AUTORIZADO POR"] = autorizadoPor;
+      nueva["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";
+      nueva["FECHA MODIFICACIÓN"] = ahora;
+      await DB.put("inventario", nueva);
+    }
+
+    await Auditoria.registrar("Traspaso", ref, "TOTAL PIEZAS", antes,
+      `${item["TOTAL PIEZAS"]} (se enviaron ${linea.cantidad} a "${almacenDestino.nombre}", autorizó: ${autorizadoPor})`);
   },
 };
 
