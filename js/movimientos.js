@@ -51,6 +51,7 @@ const MOVIMIENTOS_CONFIG = {
     soloGestor: false,
     absoluto: true,
     permiteNota: true,
+    permiteUbicacion: true,
   },
 };
 
@@ -185,6 +186,8 @@ const Movimientos = {
     document.getElementById("cantidad-item-desc").textContent = descTxt;
     document.getElementById("cantidad-label").textContent = cfg.etiquetaCantidad;
     document.getElementById("cantidad-input").value = esConteo && item["CONTEO"] !== "" && item["CONTEO"] != null ? item["CONTEO"] : "";
+    document.getElementById("cantidad-ubicacion-wrap").hidden = !cfg.permiteUbicacion;
+    document.getElementById("cantidad-ubicacion").value = esConteo ? (item["UBICACIÓN"] || "") : "";
     document.getElementById("cantidad-nota-wrap").hidden = !cfg.permiteNota;
     document.getElementById("cantidad-nota").value = esConteo ? (item["OBSERVACIONES"] || "") : "";
 
@@ -216,23 +219,27 @@ const Movimientos = {
       }
       destino = sel.options[sel.selectedIndex].textContent;
     }
-    let nota;
+    let nota, ubicacion;
     if (cfg.permiteNota) {
       nota = document.getElementById("cantidad-nota").value.trim();
     }
-    this._agregarACarrito(this.itemPendiente, cantidad, destino, nota);
+    if (cfg.permiteUbicacion) {
+      ubicacion = document.getElementById("cantidad-ubicacion").value.trim();
+    }
+    this._agregarACarrito(this.itemPendiente, cantidad, destino, nota, ubicacion);
     cerrarModal("modal-cantidad");
     document.getElementById("search-input").value = "";
     document.getElementById("mov-sugerencias").innerHTML = "";
   },
 
-  _agregarACarrito(item, cantidad, destino, nota) {
+  _agregarACarrito(item, cantidad, destino, nota, ubicacion) {
     const cfg = MOVIMIENTOS_CONFIG[this.tipoActual];
     const existente = this.carrito.find((l) => l.id === item._id);
     if (existente) {
       existente.cantidad = cfg.absoluto ? cantidad : existente.cantidad + cantidad;
       if (destino) existente.destino = destino;
       if (nota !== undefined) existente.nota = nota;
+      if (ubicacion !== undefined) existente.ubicacion = ubicacion;
     } else {
       this.carrito.push({
         id: item._id,
@@ -242,6 +249,7 @@ const Movimientos = {
         cantidad,
         destino,
         nota,
+        ubicacion,
       });
     }
     this.render();
@@ -274,7 +282,7 @@ const Movimientos = {
         <div class="item-card-main">
           <div class="item-cantidad">${linea.cantidad}</div>
           <div class="item-nombre">${escapeHtml(linea.descripcion)}</div>
-          <div class="item-sub">${escapeHtml(linea.codigo)}${linea.galpon ? " · " + escapeHtml(linea.galpon) : ""}${linea.destino ? " → " + escapeHtml(linea.destino) : ""}${linea.nota ? " · " + escapeHtml(linea.nota) : ""}</div>
+          <div class="item-sub">${escapeHtml(linea.codigo)}${linea.galpon ? " · " + escapeHtml(linea.galpon) : ""}${linea.destino ? " → " + escapeHtml(linea.destino) : ""}${linea.ubicacion ? " · 📍" + escapeHtml(linea.ubicacion) : ""}${linea.nota ? " · " + escapeHtml(linea.nota) : ""}</div>
         </div>
         <div class="item-card-side">
           <button class="trash-btn" data-id="${linea.id}" aria-label="Quitar">${svgIcon("papelera")}</button>
@@ -359,6 +367,11 @@ const Movimientos = {
           const notaAntes = item["OBSERVACIONES"] || "-";
           item["OBSERVACIONES"] = linea.nota;
           await Auditoria.registrar("Conteo", ref, "OBSERVACIONES", notaAntes, linea.nota);
+        }
+        if (linea.ubicacion) {
+          const ubicAntes = item["UBICACIÓN"] || "-";
+          item["UBICACIÓN"] = linea.ubicacion;
+          await Auditoria.registrar("Conteo", ref, "UBICACIÓN", ubicAntes, linea.ubicacion);
         }
       }
       item["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";

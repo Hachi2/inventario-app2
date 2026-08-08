@@ -495,10 +495,49 @@ async function iniciar() {
   document.querySelector(".nav-btn[data-tab='usuarios'] .nav-icon").innerHTML = ICONS.usuario;
   document.querySelector(".nav-btn[data-tab='ajustes'] .nav-icon").innerHTML = ICONS.engranaje;
 
-  // -------- Service worker (offline) --------
+  // -------- Service worker (offline + detectar actualizaciones) --------
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    // updateViaCache: "none" evita que el navegador use una copia vieja
+    // en caché del propio sw.js al revisar si hay una versión nueva.
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((registro) => {
+      // Si ya había un service worker esperando (versión nueva descargada
+      // en una visita anterior), avisa ahora.
+      if (registro.waiting) mostrarAvisoActualizacion(registro.waiting);
+
+      registro.addEventListener("updatefound", () => {
+        const nuevo = registro.installing;
+        if (!nuevo) return;
+        nuevo.addEventListener("statechange", () => {
+          if (nuevo.state === "installed" && navigator.serviceWorker.controller) {
+            mostrarAvisoActualizacion(nuevo);
+          }
+        });
+      });
+
+      // Revisa si hay una versión nueva cada vez que la app vuelve a
+      // primer plano (por ejemplo, al reabrirla desde el ícono).
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") registro.update().catch(() => {});
+      });
+    }).catch(() => {});
+
+    let recargando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (recargando) return;
+      recargando = true;
+      window.location.reload();
+    });
   }
+}
+
+function mostrarAvisoActualizacion(swEnEspera) {
+  const banner = document.getElementById("banner-actualizacion");
+  if (!banner || banner.dataset.mostrado) return;
+  banner.dataset.mostrado = "1";
+  banner.hidden = false;
+  document.getElementById("btn-actualizar-app").addEventListener("click", () => {
+    swEnEspera.postMessage({ tipo: "SKIP_WAITING" });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", iniciar);

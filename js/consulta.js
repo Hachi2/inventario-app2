@@ -71,6 +71,7 @@ const Consulta = {
     const claseStock = stock < 0 ? "stock-bad" : "stock-ok";
     const filas = [
       ["Galpón", item["GALPÓN"]],
+      ["Ubicación", item["UBICACIÓN"]],
       ["Sistema", item["SISTEMA"]],
       ["Pedido/Ítem", item["PEDIDO/ÍTEM"]],
       ["Total piezas", item["TOTAL PIEZAS"]],

@@ -1,9 +1,53 @@
-# Inventario Offline — instrucciones (v4)
+# Inventario Offline — instrucciones (v5)
 
 App web instalable (PWA): se agrega a la pantalla de inicio del teléfono
 como una app más y funciona **sin internet** en el día a día.
 
+## Corrigiendo lo que reportaste
+
+**"La PC muestra 1 resultado y el teléfono 40, y en el teléfono no
+aparecía el total de piezas"** — eran dos problemas distintos, ya
+corregidos:
+
+1. **El cuadro de totales no aparecía en el teléfono** porque el teléfono
+   tenía guardada en caché una versión más vieja de la app (así funcionan
+   las apps offline: guardan una copia local, y si no se le avisa que hay
+   una nueva, se queda con la vieja). Ya cambié cómo se actualiza: ahora,
+   apenas haya una versión nueva, te va a aparecer un aviso arriba de la
+   pantalla que dice **"Actualizar"** — tócalo para pasar a la última
+   versión al instante, en cualquier dispositivo.
+2. **La PC y el teléfono mostraron cantidades distintas para el mismo
+   código** — esto **no es un error**, es cómo está construida la app a
+   propósito: cada dispositivo (esta PC, ese teléfono) guarda su propia
+   copia de los datos, ahí mismo, sin pasar por internet ni por ningún
+   servidor — por eso funciona sin conexión. Si cargaste el Excel en el
+   teléfono pero no en la PC (o los cargaste en momentos distintos), cada
+   uno va a tener lo que se le cargó a él. Si quieres que ambos muestren
+   exactamente lo mismo: carga el mismo archivo Excel (el más actualizado)
+   en **Ajustes → Base de datos → Cargar Excel** en los dos dispositivos.
+   Ver más abajo, en "Preguntas frecuentes", si quieres que esto sí se
+   sincronice solo en el futuro.
+
 ## Novedades de esta versión
+
+- **Ubicación en Conteo físico (nuevo):** al hacer un conteo, ahora puedes
+  anotar en qué ubicación (pasillo, estante, etc.) encontraste el
+  material. Se ve en Consulta junto al resto de los datos del artículo, y
+  se agregó como columna nueva (`UBICACIÓN`) al descargar el Excel.
+- **Lee cualquier Excel (nuevo):** antes, la app esperaba que los
+  encabezados estuvieran siempre en la primera fila. Ahora revisa las
+  primeras 20 filas de cada hoja del archivo buscando dónde está la
+  columna CODIGO — así funciona aunque el Excel tenga un título, un logo o
+  filas en blanco antes de la tabla. También es más flexible leyendo
+  números escritos de formas distintas (con comas, puntos, unidades como
+  "2,5 kg", etc.).
+- **Ahora funciona igual de bien en PC:** en pantallas grandes, la app se
+  ve centrada en un panel — ya no se estira de punta a punta de la
+  pantalla. El diseño de Consulta (y de todo lo demás) es exactamente el
+  mismo, solo mejor acomodado.
+- **Actualizaciones confiables:** ver la sección de arriba — ahora la app
+  avisa cuando hay una versión nueva en vez de quedarse pegada en una
+  vieja.
 
 - **Consulta ahora suma las coincidencias (nuevo):** si buscas un código que
   aparece en varios lotes/galpones, arriba de los resultados aparece un
@@ -190,10 +234,13 @@ compartas tu logo, te dejo los tonos ajustados a él.
 **¿Y si no tengo forma de subir esto a GitHub?**
 Dímelo y preparamos otra vía, o te guío paso a paso con capturas.
 
-**¿Varios teléfonos pueden compartir el mismo inventario en tiempo real?**
-No en esta versión — cada teléfono guarda su propia copia local para poder
-funcionar sin internet. Está pensada para un dispositivo por
-almacén/turno, que luego exporta el Excel para consolidar. Si necesitas
-que varios teléfonos vean el mismo inventario al instante, eso requiere un
-servidor central — es un proyecto distinto, avísame si te interesa
-explorarlo.
+**¿Varios teléfonos o PCs pueden compartir el mismo inventario en tiempo
+real?**
+No en esta versión — como se explica arriba, cada dispositivo guarda su
+propia copia local para poder funcionar sin internet. Si necesitas que
+todos vean el mismo inventario al instante (por ejemplo, varios
+almacenistas en distintos teléfonos tocando el mismo stock a la vez), eso
+requiere un servidor central que sí dependa de internet — es un cambio de
+arquitectura, no un ajuste chico. Dímelo si te interesa explorarlo; por
+ahora, la forma de mantener todo alineado es cargar el mismo Excel
+actualizado en cada dispositivo.

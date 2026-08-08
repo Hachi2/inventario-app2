@@ -266,6 +266,10 @@
         <span id="cantidad-label">Cantidad</span>
         <input type="number" id="cantidad-input" min="0" step="1" inputmode="numeric" autofocus>
       </label>
+      <div id="cantidad-ubicacion-wrap" class="field" hidden>
+        <span>Ubicación (opcional)</span>
+        <input type="text" id="cantidad-ubicacion" placeholder="Ej. Pasillo 3, Estante B">
+      </div>
       <div id="cantidad-nota-wrap" class="field" hidden>
         <span>Observación (opcional)</span>
         <textarea id="cantidad-nota" rows="2" placeholder="Ej. producto dañado, faltante por revisar..."></textarea>
@@ -385,6 +389,11 @@
 </div>
 
 <div id="toast" class="toast" hidden></div>
+
+<div id="banner-actualizacion" class="banner-actualizacion" hidden>
+  <span>Hay una nueva versión de la app lista.</span>
+  <button id="btn-actualizar-app" class="btn btn-primary btn-sm">Actualizar</button>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="js/icons.js"></script>
