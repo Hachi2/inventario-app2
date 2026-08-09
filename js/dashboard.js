@@ -3,7 +3,40 @@
    escritorio (PC). Se arma con los datos del almacén que esté
    seleccionado en ese momento — el mismo Excel que se ve en
    Consulta, Entrada, Salida, etc. No modifica ningún dato.
+
+   Los 4 gráficos son circulares (dona), como se pidió:
+   1) Total de piezas vs Stock final   (Stock final = Total - Conteo - Entregado)
+   2) Total de piezas vs Total entregado
+   3) Cantidad disponible por producto (Disponible = Total - Entregado)
+   4) Total de piezas vs Conteo, con el % contado en el centro
    ========================================================= */
+
+const PALETAS_DASHBOARD = {
+  ambar: ["#E8A93A", "#6FAE8C", "#D97A5C", "#7C9CC9", "#B08AD1", "#D4B25A"],
+  azul: ["#3E6FA8", "#6FA8D6", "#4FA490", "#D97A5C", "#8C7AC9", "#7C9CC9"],
+  verde: ["#2F8F5B", "#6FAE3E", "#D97A3F", "#3E9E8F", "#C9A227", "#4F7A2F"],
+};
+
+// Plugin de Chart.js casero para escribir el % en el centro de una dona
+// (sin depender de ninguna librería extra).
+const pluginTextoCentral = {
+  id: "textoCentral",
+  afterDraw(chart) {
+    const texto = chart.options.plugins && chart.options.plugins.textoCentral && chart.options.plugins.textoCentral.texto;
+    if (!texto) return;
+    const { ctx, chartArea } = chart;
+    const x = (chartArea.left + chartArea.right) / 2;
+    const y = (chartArea.top + chartArea.bottom) / 2;
+    ctx.save();
+    ctx.font = "700 22px Arial, sans-serif";
+    ctx.fillStyle = chart.options.plugins.textoCentral.color || "#3A362E";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(texto, x, y);
+    ctx.restore();
+  },
+};
+if (typeof Chart !== "undefined") Chart.register(pluginTextoCentral);
 
 const Dashboard = {
   graficos: {},
@@ -32,24 +65,26 @@ const Dashboard = {
     const totalConteo = items.reduce((s, i) => s + num(i["CONTEO"]), 0);
     const totalEntregado = items.reduce((s, i) => s + num(i["ENTREGADO"]), 0);
     const totalStockFinal = items.reduce((s, i) => s + num(i["STOCK FINAL"]), 0);
-    const contados = items.filter((i) => i["CONTEO"] !== "" && i["CONTEO"] != null).length;
-    return { items, totalPiezas, totalConteo, totalEntregado, totalStockFinal, contados };
+    return { items, totalPiezas, totalConteo, totalEntregado, totalStockFinal };
   },
 
+  /* 6 tarjetas — se quitaron "Filas cargadas" y "Filas ya contadas" a
+     pedido. Se dejó "Códigos distintos" porque, al permitir la app varios
+     lotes con el mismo CODIGO, esta cifra es la única forma de ver de un
+     vistazo cuántos artículos distintos hay en el almacén (las "filas
+     cargadas" mezclan lotes repetidos y confunden esa lectura). */
   _renderKpis() {
-    const { items, totalPiezas, totalConteo, totalEntregado, totalStockFinal, contados } = this._agregados();
+    const { items, totalPiezas, totalConteo, totalEntregado, totalStockFinal } = this._agregados();
     const porcContado = totalPiezas > 0 ? (totalConteo / totalPiezas) * 100 : 0;
     const codigosUnicos = new Set(items.map((i) => i.CODIGO).filter(Boolean)).size;
 
     const tarjetas = [
-      { valor: items.length.toLocaleString("es"), etiqueta: "Filas cargadas" },
       { valor: codigosUnicos.toLocaleString("es"), etiqueta: "Códigos distintos" },
       { valor: totalPiezas.toLocaleString("es"), etiqueta: "Total piezas" },
       { valor: totalConteo.toLocaleString("es"), etiqueta: "Total contado" },
       { valor: totalEntregado.toLocaleString("es"), etiqueta: "Total entregado" },
       { valor: totalStockFinal.toLocaleString("es"), etiqueta: "Stock final" },
       { valor: `${porcContado.toFixed(0)}%`, etiqueta: "% del stock contado", destacado: true },
-      { valor: `${contados}/${items.length}`, etiqueta: "Filas ya contadas" },
     ];
 
     document.getElementById("dashboard-kpis").innerHTML = tarjetas.map((t) => `
@@ -61,9 +96,8 @@ const Dashboard = {
 
   /* Agrupa por DESCRIPCIÓN (o CODIGO si no hay descripción), sumando
      cantidades — así funciona igual aunque el mismo código esté repartido
-     en varios galpones/lotes. Se queda con los N más grandes para que el
-     gráfico se vea claro. */
-  _agruparPorProducto(campoValor, topN = 8) {
+     en varios galpones/lotes. */
+  _agruparPorProducto(topN = 8) {
     const mapa = new Map();
     Inventario.cache.forEach((item) => {
       const clave = item["DESCRIPCIÓN"] || item.CODIGO || "(sin descripción)";
@@ -74,26 +108,16 @@ const Dashboard = {
       g.entregado += Number(item["ENTREGADO"]) || 0;
       g.stockFinal += Number(item["STOCK FINAL"]) || 0;
     });
-    return [...mapa.entries()]
-      .sort((a, b) => b[1][campoValor] - a[1][campoValor])
-      .slice(0, topN);
-  },
-
-  _agruparPorGalpon() {
-    const mapa = new Map();
-    Inventario.cache.forEach((item) => {
-      const clave = item["GALPÓN"] || "(sin galpón)";
-      mapa.set(clave, (mapa.get(clave) || 0) + (Number(item["TOTAL PIEZAS"]) || 0));
-    });
-    return [...mapa.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    return [...mapa.entries()];
   },
 
   _colorTema() {
     const oscuro = document.body.getAttribute("data-theme") === "dark";
+    const nombrePaleta = document.body.getAttribute("data-paleta") || "ambar";
     return {
       texto: oscuro ? "#EDECEA" : "#3A362E",
-      grilla: oscuro ? "rgba(255,255,255,0.08)" : "rgba(20,18,14,0.08)",
-      paleta: ["#E8A93A", "#6FAE8C", "#D97A5C", "#7C9CC9", "#B08AD1", "#D4B25A"],
+      muted: oscuro ? "rgba(255,255,255,0.14)" : "rgba(20,18,14,0.10)",
+      paleta: PALETAS_DASHBOARD[nombrePaleta] || PALETAS_DASHBOARD.ambar,
     };
   },
 
@@ -104,83 +128,70 @@ const Dashboard = {
     }
   },
 
+  /* Dona de "progreso": 2 franjas (la parte que se mide vs el resto),
+     con el % escrito en el centro. Así se muestran las comparaciones
+     "X vs total de piezas" de forma circular, como se pidió. */
+  _donaProgreso(canvasId, idInterno, tema, valorMedido, total, colorMedido, etiquetaMedido) {
+    const restante = Math.max(total - valorMedido, 0);
+    const pct = total > 0 ? Math.round((valorMedido / total) * 100) : 0;
+    this._destruirGrafico(idInterno);
+    this.graficos[idInterno] = new Chart(document.getElementById(canvasId), {
+      type: "doughnut",
+      data: {
+        labels: [etiquetaMedido, "Resto"],
+        datasets: [{ data: [valorMedido, restante], backgroundColor: [colorMedido, tema.muted], borderWidth: 0 }],
+      },
+      options: {
+        responsive: true,
+        cutout: "68%",
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 12 } },
+          textoCentral: { texto: `${pct}%`, color: tema.texto },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${ctx.raw.toLocaleString("es")} (${total > 0 ? Math.round((ctx.raw / total) * 100) : 0}%)`,
+            },
+          },
+        },
+      },
+      plugins: [pluginTextoCentral],
+    });
+  },
+
   _renderCharts() {
     if (typeof Chart === "undefined") return; // sin conexión la primera vez: no rompe el resto del dashboard
     const tema = this._colorTema();
     Chart.defaults.color = tema.texto;
     Chart.defaults.font.family = "Arial, sans-serif";
+    const { totalPiezas, totalConteo, totalEntregado, totalStockFinal } = this._agregados();
 
-    // 1) Stock total vs Stock final, por producto
-    const porTotal = this._agruparPorProducto("total");
-    this._destruirGrafico("stockVsFinal");
-    this.graficos.stockVsFinal = new Chart(document.getElementById("chart-stock-vs-final"), {
-      type: "bar",
-      data: {
-        labels: porTotal.map(([nombre]) => nombre),
-        datasets: [
-          { label: "Stock total", data: porTotal.map(([, v]) => v.total), backgroundColor: tema.paleta[3] },
-          { label: "Stock final", data: porTotal.map(([, v]) => v.stockFinal), backgroundColor: tema.paleta[0] },
-        ],
-      },
-      options: { responsive: true, scales: { x: { grid: { display: false } }, y: { grid: { color: tema.grilla } } } },
-    });
+    // 1) Total de piezas vs Stock final
+    this._donaProgreso("chart-stock-vs-final", "stockVsFinal", tema, totalStockFinal, totalPiezas, tema.paleta[0], "Stock final");
 
-    // 2) Conteo vs Total, con % contado por producto
-    this._destruirGrafico("conteoVsTotal");
-    this.graficos.conteoVsTotal = new Chart(document.getElementById("chart-conteo-vs-total"), {
-      type: "bar",
-      data: {
-        labels: porTotal.map(([nombre]) => nombre),
-        datasets: [
-          { label: "Total", data: porTotal.map(([, v]) => v.total), backgroundColor: tema.grilla === "rgba(255,255,255,0.08)" ? "rgba(255,255,255,0.18)" : "rgba(20,18,14,0.12)" },
-          { label: "Contado", data: porTotal.map(([, v]) => v.conteo), backgroundColor: tema.paleta[1] },
-        ],
-      },
-      options: {
-        responsive: true,
-        scales: { x: { grid: { display: false } }, y: { grid: { color: tema.grilla } } },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              afterBody: (ctx) => {
-                const [, v] = porTotal[ctx[0].dataIndex];
-                const pct = v.total > 0 ? ((v.conteo / v.total) * 100).toFixed(0) : 0;
-                return `Contado: ${pct}%`;
-              },
-            },
-          },
-        },
-      },
-    });
+    // 2) Total de piezas vs Total entregado
+    this._donaProgreso("chart-conteo-vs-total", "totalVsEntregado", tema, totalEntregado, totalPiezas, tema.paleta[2], "Entregado");
 
-    // 3) Piezas por galpón
-    const porGalpon = this._agruparPorGalpon();
-    this._destruirGrafico("porGalpon");
-    this.graficos.porGalpon = new Chart(document.getElementById("chart-por-galpon"), {
+    // 3) Cantidad disponible por producto (Disponible = Total - Entregado,
+    //    es decir, basada en las salidas/entregas — como se pidió)
+    const porProducto = this._agruparPorProducto()
+      .map(([nombre, v]) => [nombre, Math.max(v.total - v.entregado, 0)])
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+    this._destruirGrafico("disponiblePorProducto");
+    this.graficos.disponiblePorProducto = new Chart(document.getElementById("chart-por-galpon"), {
       type: "doughnut",
       data: {
-        labels: porGalpon.map(([g]) => g),
-        datasets: [{ data: porGalpon.map(([, v]) => v), backgroundColor: tema.paleta }],
-      },
-      options: { responsive: true, plugins: { legend: { position: "right", labels: { boxWidth: 12 } } } },
-    });
-
-    // 4) Entregado vs disponible (stock final), por producto
-    this._destruirGrafico("entregadoVsDisponible");
-    this.graficos.entregadoVsDisponible = new Chart(document.getElementById("chart-entregado-vs-disponible"), {
-      type: "bar",
-      data: {
-        labels: porTotal.map(([nombre]) => nombre),
-        datasets: [
-          { label: "Entregado", data: porTotal.map(([, v]) => v.entregado), backgroundColor: tema.paleta[2] },
-          { label: "Disponible (stock final)", data: porTotal.map(([, v]) => v.stockFinal), backgroundColor: tema.paleta[0] },
-        ],
+        labels: porProducto.map(([nombre]) => nombre),
+        datasets: [{ data: porProducto.map(([, v]) => v), backgroundColor: tema.paleta, borderWidth: 0 }],
       },
       options: {
-        indexAxis: "y",
         responsive: true,
-        scales: { x: { grid: { color: tema.grilla } }, y: { grid: { display: false } } },
+        cutout: "55%",
+        plugins: { legend: { position: "right", labels: { boxWidth: 12 } } },
       },
     });
+
+    // 4) Total de piezas vs Conteo, con el % contado en el centro
+    this._donaProgreso("chart-entregado-vs-disponible", "totalVsConteo", tema, totalConteo, totalPiezas, tema.paleta[1], "Contado");
   },
 };

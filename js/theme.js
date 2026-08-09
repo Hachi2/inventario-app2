@@ -9,9 +9,11 @@ const Theme = {
     const modo = await DB.get("config", "tema_modo");
     const imagen = await DB.get("config", "tema_imagen");
     const opacidad = await DB.get("config", "tema_opacidad");
+    const paleta = await DB.get("config", "paleta");
 
     const modoActual = modo ? modo.valor : "light";
     document.body.setAttribute("data-theme", modoActual);
+    document.body.setAttribute("data-paleta", paleta ? paleta.valor : "ambar");
 
     if (imagen && imagen.valor) {
       document.body.style.setProperty("--bg-image", `url(${imagen.valor})`);
@@ -23,6 +25,7 @@ const Theme = {
     }
 
     this._marcarActivo(modoActual);
+    this._marcarPaletaActiva(paleta ? paleta.valor : "ambar");
     if (modoActual === "image") {
       document.getElementById("bg-image-controls").hidden = false;
     }
@@ -34,6 +37,20 @@ const Theme = {
     document.querySelectorAll(".theme-swatch").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.theme === modo);
     });
+  },
+
+  _marcarPaletaActiva(paleta) {
+    document.querySelectorAll(".paleta-swatch").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.paleta === paleta);
+    });
+  },
+
+  async setPaleta(paleta) {
+    document.body.setAttribute("data-paleta", paleta);
+    await DB.put("config", { clave: "paleta", valor: paleta });
+    this._marcarPaletaActiva(paleta);
+    if (typeof Dashboard !== "undefined") Dashboard.render();
+    mostrarToast("Paleta de colores actualizada");
   },
 
   async setModo(modo) {

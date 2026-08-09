@@ -106,19 +106,19 @@
         <div class="dashboard-kpis" id="dashboard-kpis"></div>
         <div class="dashboard-charts">
           <div class="dashboard-chart-card">
-            <h3>Stock total vs. stock final</h3>
+            <h3>Total de piezas vs. stock final</h3>
             <canvas id="chart-stock-vs-final"></canvas>
           </div>
           <div class="dashboard-chart-card">
-            <h3>Conteo vs. total (% contado)</h3>
+            <h3>Total de piezas vs. entregado</h3>
             <canvas id="chart-conteo-vs-total"></canvas>
           </div>
           <div class="dashboard-chart-card">
-            <h3>Piezas por galpón</h3>
+            <h3>Cantidad disponible por producto</h3>
             <canvas id="chart-por-galpon"></canvas>
           </div>
           <div class="dashboard-chart-card">
-            <h3>Entregado vs. disponible</h3>
+            <h3>Total de piezas vs. conteo (% contado)</h3>
             <canvas id="chart-entregado-vs-disponible"></canvas>
           </div>
         </div>
@@ -275,6 +275,32 @@
         <input type="range" id="bg-opacity" min="5" max="90" value="30">
       </label>
       <button id="btn-quitar-fondo" class="btn btn-secondary btn-sm">Quitar imagen</button>
+    </div>
+
+    <h2>Paleta de colores</h2>
+    <p class="muted small">Aplica a Consulta, Entrada, Salida, Traspaso, Conteo físico y al dashboard de escritorio.</p>
+    <div class="paleta-options">
+      <button class="paleta-swatch" data-paleta="ambar">
+        <span class="paleta-dots">
+          <span style="background:#F7DE9E"></span><span style="background:#F2BE94"></span>
+          <span style="background:#EFB07E"></span><span style="background:#E9C9A0"></span>
+        </span>
+        Ámbar cálido
+      </button>
+      <button class="paleta-swatch" data-paleta="azul">
+        <span class="paleta-dots">
+          <span style="background:#BBD6EE"></span><span style="background:#E9C3BC"></span>
+          <span style="background:#C7CDF0"></span><span style="background:#C6D8EC"></span>
+        </span>
+        Azul profesional
+      </button>
+      <button class="paleta-swatch" data-paleta="verde">
+        <span class="paleta-dots">
+          <span style="background:#CBE8D3"></span><span style="background:#F2CBA0"></span>
+          <span style="background:#BFE0DC"></span><span style="background:#E9DFA8"></span>
+        </span>
+        Verde esmeralda
+      </button>
     </div>
 
     <h2>Mi sesión</h2>

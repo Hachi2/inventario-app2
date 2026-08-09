@@ -1,8 +1,35 @@
-# Inventario Offline — instrucciones (v6)
+# Inventario Offline — instrucciones (v7)
 
 App web instalable (PWA): en el teléfono se agrega a la pantalla de inicio
 como una app más y funciona **sin internet** en el día a día. En PC o
-navegador ancho se ve como una página web normal, con dashboard incluido.
+navegador ancho se ve como una página web normal a pantalla completa, con
+dashboard incluido.
+
+## Novedades de esta versión
+
+- **PC a pantalla completa:** la app ya no queda encerrada en un panel de
+  ancho fijo — usa todo el espacio de la pantalla, como cualquier página
+  web. En el teléfono sigue adaptándose a su tamaño como siempre.
+- **Dashboard con 4 gráficos circulares, redefinidos:**
+  1. **Total de piezas vs. stock final** (Stock final = Total − Conteo −
+     Entregado), con el % en el centro.
+  2. **Total de piezas vs. entregado**, con el % en el centro.
+  3. **Cantidad disponible por producto** — calculada como Total menos
+     Entregado (es decir, en base a las salidas), repartida por producto.
+  4. **Total de piezas vs. conteo**, con el % contado en el centro — el
+     total de piezas representa el 100% y el conteo se muestra como
+     proporción de ese total.
+- **KPIs recortados a 6:** quité "Filas cargadas" y "Filas ya contadas".
+  Dejé **"Códigos distintos"** porque, como el mismo CODIGO puede repetirse
+  en varios lotes/galpones, es la única cifra que muestra de un vistazo
+  cuántos artículos distintos hay — "filas cargadas" mezclaba lotes
+  repetidos y confundía esa lectura. Si prefieres que también la quite,
+  dímelo.
+- **3 paletas de colores (nuevo):** en **Ajustes → Paleta de colores**
+  puedes elegir entre *Ámbar cálido* (la de siempre), *Azul profesional* o
+  *Verde esmeralda*. Se aplica a las 5 tarjetas de Inicio (Consulta,
+  Entrada, Salida, Traspaso, Conteo) y a los colores del dashboard de
+  escritorio — cada usuario administrador puede elegir la que más le guste.
 
 ## Sobre "que todos vean el Excel que cargó el Coordinador"
 
@@ -219,10 +246,10 @@ código a mano en la barra de búsqueda, que sigue funcionando siempre.
 ## Apariencia
 
 En **Ajustes** puedes elegir tema claro, oscuro, o imagen de fondo (tu logo
-u otra imagen) con una barra para controlar la transparencia. Los colores
-de las 5 tarjetas de Inicio y del dashboard están como variables al
-principio de `css/styles.css` (`--card-consulta-bg`, etc.), fáciles de
-ajustar cuando me pases tu logo.
+u otra imagen) con una barra para controlar la transparencia, y una de las
+3 paletas de colores (ver Novedades arriba). Si más adelante me pasas tu
+logo y quieres una cuarta paleta calcada exactamente a esos colores, la
+agrego igual que las otras tres.
 
 ## Preguntas frecuentes
 

@@ -9,7 +9,7 @@
    una versión vieja pegada.
    ========================================================= */
 
-const CACHE_NAME = "inventario-offline-v5";
+const CACHE_NAME = "inventario-offline-v6";
 
 const ARCHIVOS_A_GUARDAR = [
   "./",

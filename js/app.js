@@ -454,6 +454,9 @@ async function iniciar() {
   document.querySelectorAll(".theme-swatch").forEach((btn) => {
     btn.addEventListener("click", () => Theme.setModo(btn.dataset.theme));
   });
+  document.querySelectorAll(".paleta-swatch").forEach((btn) => {
+    btn.addEventListener("click", () => Theme.setPaleta(btn.dataset.paleta));
+  });
   document.getElementById("bg-image-input").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
