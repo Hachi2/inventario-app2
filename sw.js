@@ -9,7 +9,7 @@
    una versión vieja pegada.
    ========================================================= */
 
-const CACHE_NAME = "inventario-offline-v4";
+const CACHE_NAME = "inventario-offline-v5";
 
 const ARCHIVOS_A_GUARDAR = [
   "./",
@@ -26,10 +26,12 @@ const ARCHIVOS_A_GUARDAR = [
   "./js/movimientos.js",
   "./js/auditoria.js",
   "./js/usuarios.js",
+  "./js/dashboard.js",
   "./js/app.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js",
 ];
 
 self.addEventListener("install", (event) => {

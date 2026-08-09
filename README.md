@@ -1,115 +1,120 @@
-# Inventario Offline — instrucciones (v5)
+# Inventario Offline — instrucciones (v6)
 
-App web instalable (PWA): se agrega a la pantalla de inicio del teléfono
-como una app más y funciona **sin internet** en el día a día.
+App web instalable (PWA): en el teléfono se agrega a la pantalla de inicio
+como una app más y funciona **sin internet** en el día a día. En PC o
+navegador ancho se ve como una página web normal, con dashboard incluido.
 
-## Corrigiendo lo que reportaste
+## Sobre "que todos vean el Excel que cargó el Coordinador"
 
-**"La PC muestra 1 resultado y el teléfono 40, y en el teléfono no
-aparecía el total de piezas"** — eran dos problemas distintos, ya
-corregidos:
+Me lo has pedido un par de veces ya, así que quiero ser claro: **con la
+arquitectura actual (sin servidor, para poder funcionar sin internet), esto
+no es posible automáticamente** — cada dispositivo guarda su propia copia.
+No es algo que se me haya quedado pendiente por descuido; es la
+consecuencia directa de que la app funcione offline.
 
-1. **El cuadro de totales no aparecía en el teléfono** porque el teléfono
-   tenía guardada en caché una versión más vieja de la app (así funcionan
-   las apps offline: guardan una copia local, y si no se le avisa que hay
-   una nueva, se queda con la vieja). Ya cambié cómo se actualiza: ahora,
-   apenas haya una versión nueva, te va a aparecer un aviso arriba de la
-   pantalla que dice **"Actualizar"** — tócalo para pasar a la última
-   versión al instante, en cualquier dispositivo.
-2. **La PC y el teléfono mostraron cantidades distintas para el mismo
-   código** — esto **no es un error**, es cómo está construida la app a
-   propósito: cada dispositivo (esta PC, ese teléfono) guarda su propia
-   copia de los datos, ahí mismo, sin pasar por internet ni por ningún
-   servidor — por eso funciona sin conexión. Si cargaste el Excel en el
-   teléfono pero no en la PC (o los cargaste en momentos distintos), cada
-   uno va a tener lo que se le cargó a él. Si quieres que ambos muestren
-   exactamente lo mismo: carga el mismo archivo Excel (el más actualizado)
-   en **Ajustes → Base de datos → Cargar Excel** en los dos dispositivos.
-   Ver más abajo, en "Preguntas frecuentes", si quieres que esto sí se
-   sincronice solo en el futuro.
+Si de verdad necesitas que varios usuarios, en distintos dispositivos, vean
+al instante lo que carga el Coordinador, la única forma real de lograrlo es
+agregar un servidor/base de datos en la nube (por ejemplo Firebase, que
+tiene un plan gratuito y — buena noticia — también sabe funcionar offline y
+sincronizar solo cuando hay señal, así que no perderíamos la parte offline).
+Es un cambio de arquitectura de verdad, no un ajuste chico, y necesitaría
+que crees una cuenta gratuita y me compartas las claves del proyecto para
+conectarlo. Dime si quieres que lo hagamos y lo planificamos como el
+siguiente paso grande.
+
+Mientras tanto, la forma de mantener a todos alineados es: el Coordinador
+carga el Excel y lo comparte (WhatsApp, correo, drive) con el resto, y cada
+quien lo carga en **Ajustes → Base de datos → Cargar Excel** en su propio
+dispositivo.
 
 ## Novedades de esta versión
 
-- **Ubicación en Conteo físico (nuevo):** al hacer un conteo, ahora puedes
-  anotar en qué ubicación (pasillo, estante, etc.) encontraste el
-  material. Se ve en Consulta junto al resto de los datos del artículo, y
-  se agregó como columna nueva (`UBICACIÓN`) al descargar el Excel.
-- **Lee cualquier Excel (nuevo):** antes, la app esperaba que los
-  encabezados estuvieran siempre en la primera fila. Ahora revisa las
-  primeras 20 filas de cada hoja del archivo buscando dónde está la
-  columna CODIGO — así funciona aunque el Excel tenga un título, un logo o
-  filas en blanco antes de la tabla. También es más flexible leyendo
-  números escritos de formas distintas (con comas, puntos, unidades como
-  "2,5 kg", etc.).
-- **Ahora funciona igual de bien en PC:** en pantallas grandes, la app se
-  ve centrada en un panel — ya no se estira de punta a punta de la
-  pantalla. El diseño de Consulta (y de todo lo demás) es exactamente el
-  mismo, solo mejor acomodado.
-- **Actualizaciones confiables:** ver la sección de arriba — ahora la app
-  avisa cuando hay una versión nueva en vez de quedarse pegada en una
-  vieja.
-
-- **Consulta ahora suma las coincidencias (nuevo):** si buscas un código que
-  aparece en varios lotes/galpones, arriba de los resultados aparece un
-  cuadro con el total de coincidencias, la suma de **Total piezas** y la
-  suma de **Stock final** de todo lo que encontró — así ves de un vistazo
-  cuánto hay en total de ese artículo, sin sumar a mano.
-- **Traspaso entre almacenes distintos (nuevo):** además de mover un
-  artículo de un galpón a otro (dentro del mismo almacén), ahora puedes
-  elegir "Traspaso entre almacenes" para mover cantidad de un almacén hacia
-  otro almacén cargado en la app — resta del origen, suma en el destino (o
-  crea el artículo ahí si no existía), y ninguno de los dos almacenes se ve
-  afectado más allá de esa cantidad exacta.
-- **Nuevos campos en Entrada, Salida y Traspaso:** ahora se pide el
-  **nombre y apellido** de quien trae o retira el material, el
-  **departamento que solicita**, y en Traspaso además **quién autoriza**.
-  La fecha y hora quedan registradas solas, sin que tengas que escribirlas.
-  Todo esto se guarda en columnas nuevas del Excel de ese almacén:
-  `PERSONA`, `DEPARTAMENTO`, `TRASPASO` y `AUTORIZADO POR`.
+- **Entrada de almacén con mercancía nueva (sin código):** al entrar a
+  "Entrada de almacén" hay un selector arriba — "Artículo existente" /
+  "Mercancía nueva". En "Mercancía nueva" solo pide Descripción y Total de
+  piezas, y usa el departamento/persona que ya escribiste arriba; guarda la
+  descripción en `DESCRIPCIÓN`, la cantidad en `TOTAL PIEZAS`, y la fecha y
+  hora quedan solas en `FECHA MODIFICACIÓN` — sin CODIGO, tal como pediste.
+- **Conteo físico bloqueado por artículo:** si un artículo ya fue contado,
+  aparece marcado en **rojo** con la etiqueta "Ya contado: N" en la
+  búsqueda de Conteo. Si otro auxiliar intenta contarlo de nuevo, la app
+  pide confirmación antes de dejarlo reemplazar el conteo — así dos
+  personas no cuentan lo mismo por accidente.
+- **Dashboard de escritorio:** al entrar desde una PC o navegador ancho,
+  debajo de los accesos rápidos aparece un dashboard del almacén
+  seleccionado: KPIs (total de piezas, total contado, % del stock contado,
+  etc.) y gráficos — Stock total vs. stock final, Conteo vs. total (con el
+  % contado), piezas por galpón, y entregado vs. disponible. Se arma solo
+  con los datos del Excel que hayas cargado, no hace falta ningún archivo
+  aparte, y se actualiza si cargas un Excel distinto.
+- **La app en PC ahora se ve como una página web normal:** barra lateral de
+  navegación en vez de la barra inferior de teléfono, usando todo el ancho
+  de la pantalla. Consulta y el resto de las pantallas de trabajo quedan
+  con el mismo diseño de siempre (mismas tarjetas, mismos colores) — solo
+  mejor acomodadas, ya no estiradas de punta a punta ni encerradas en un
+  panel angosto tipo teléfono.
+- **Ubicación en Conteo físico:** al hacer un conteo, ahora puedes anotar
+  en qué ubicación (pasillo, estante, etc.) encontraste el material. Se ve
+  en Consulta junto al resto de los datos del artículo, y se agregó como
+  columna nueva (`UBICACIÓN`) al descargar el Excel.
+- **Lee cualquier Excel:** antes, la app esperaba que los encabezados
+  estuvieran siempre en la primera fila. Ahora revisa las primeras 20 filas
+  de cada hoja del archivo buscando dónde está la columna CODIGO — así
+  funciona aunque el Excel tenga un título, un logo o filas en blanco antes
+  de la tabla. También es más flexible leyendo números escritos de formas
+  distintas (con comas, puntos, unidades como "2,5 kg", etc.).
+- **Actualizaciones confiables:** ahora la app avisa (banner arriba, con
+  botón "Actualizar") cuando hay una versión nueva, en vez de quedarse
+  pegada en una vieja por el caché del teléfono.
+- **Búsqueda de Consulta amplia:** busca por código, descripción, galpón,
+  sistema, pedido/ítem, ubicación, volumen maestro, persona y departamento
+  — si te salía muy limitada, muy probablemente tu teléfono tenía una
+  versión vieja en caché (ver el punto de arriba).
+- **Consulta suma las coincidencias:** si buscas un código que aparece en
+  varios lotes/galpones, arriba de los resultados aparece un cuadro con el
+  total de coincidencias, la suma de **Total piezas** y la suma de **Stock
+  final** de todo lo que encontró.
+- **Traspaso entre almacenes distintos:** además de mover un artículo de un
+  galpón a otro (dentro del mismo almacén), puedes elegir "Traspaso entre
+  almacenes" para mover cantidad de un almacén hacia otro almacén cargado
+  en la app — resta del origen, suma en el destino (o crea el artículo ahí
+  si no existía), sin afectar el resto de ninguno de los dos.
+- **Nuevos campos en Entrada, Salida y Traspaso:** se pide el **nombre y
+  apellido** de quien trae o retira el material, el **departamento que
+  solicita**, y en Traspaso además **quién autoriza**. La fecha y hora
+  quedan registradas solas. Todo esto se guarda en columnas del Excel de
+  ese almacén: `PERSONA`, `DEPARTAMENTO`, `TRASPASO` y `AUTORIZADO POR`.
 - **Varios almacenes independientes:** puedes cargar más de un Excel, cada
   uno con el nombre de almacén que tú elijas (por ejemplo "Almacén
-  Central", "Depósito Norte"). Sus datos **nunca se mezclan** — cambiar de
-  almacén, o hacer una Entrada/Salida/Traspaso/Conteo, solo afecta al
-  almacén que tengas seleccionado en ese momento. El botón con el nombre
-  del almacén actual está arriba de la pantalla de Inicio; tócalo para
-  cambiar de almacén o cargar uno nuevo.
-- **Pantalla de Consulta:** para buscar y ver la información completa de un
-  artículo **sin modificar nada** — pensada para cuando solo necesitas
-  revisar datos, no hacer un movimiento. La barra de búsqueda ya no aparece
-  al entrar a la app; ahora vive únicamente dentro de Consulta y dentro de
-  Entrada/Salida/Traspaso/Conteo (para buscar qué artículo mover).
-- **Columna "USUARIO" y "FECHA MODIFICACIÓN":** cada vez que alguien hace
-  una Entrada, Salida, Traspaso o Conteo sobre un artículo, esas dos
-  columnas (al final de la tabla) se actualizan automáticamente con quién
-  lo hizo y cuándo — se ven en Consulta y quedan incluidas cuando descargas
-  el Excel. Esto es aparte del Registro de actividad general, que sigue
-  llevando el historial completo de todos los cambios.
-- **Descargar Excel con el nombre del almacén:** tanto el archivo
-  (`inventario_almacen-central_2026-08-07.xlsx`) como el nombre de la
-  pestaña dentro del Excel llevan el nombre del almacén que estás
-  exportando, para no confundirlos si manejas varios.
+  Central", "Depósito Norte"). Sus datos **nunca se mezclan**.
+- **Columna "USUARIO" y "FECHA MODIFICACIÓN":** cada Entrada, Salida,
+  Traspaso o Conteo actualiza automáticamente estas dos columnas con quién
+  lo hizo y cuándo — visibles en Consulta e incluidas al descargar el
+  Excel. Aparte queda el Registro de actividad general, con el historial
+  completo.
+- **Descargar Excel con el nombre del almacén:** tanto el archivo como el
+  nombre de la pestaña dentro del Excel llevan el nombre del almacén que
+  estás exportando.
 - **Colores cálidos:** las 5 tarjetas de Inicio (Consulta, Entrada, Salida,
-  Traspaso, Conteo) usan una paleta de tonos ámbar/terracota, ninguno
-  oscuro — en cuanto me pases tu logo, ajusto los tonos exactos para que
-  combinen con él.
-- **Pantalla de inicio rediseñada**, con saludo personal y botones grandes
-  de colores.
-- **Logo de la empresa**: se sube una sola vez desde Ajustes y aparece
-  automáticamente en la pantalla de inicio de sesión y en el encabezado de
-  la app. El mismo logo se puede usar como imagen de fondo con un botón.
-- **Búsqueda corregida:** si el mismo CODIGO aparece en varias filas del
-  Excel (distintos lotes o galpones), la búsqueda ahora muestra **todas**
-  las coincidencias por separado — como el filtro de Excel — en vez de
-  quedarse con una sola.
-- **Exportar todo lo realizado**: en Ajustes hay un botón para descargar un
-  Excel con dos pestañas — el inventario actual y el registro completo de
-  movimientos — además de la descarga simple del inventario.
+  Traspaso, Conteo) usan una paleta ámbar/terracota, ninguno oscuro — en
+  cuanto me pases tu logo, ajusto los tonos exactos para que combinen.
+- **Logo de la empresa:** se sube una vez desde Ajustes y aparece en el
+  login y en el encabezado; se puede usar como imagen de fondo con un
+  botón.
 - Las credenciales del usuario inicial ya **no se muestran en la pantalla
-  de login** (quedan solo aquí, para el administrador).
+  de login** (quedan solo en este documento, para el administrador).
 - Botón de escaneo con la cámara del teléfono (ver limitación abajo).
-- Diseño más cuidado: tarjetas redondeadas, íconos propios (sin emojis),
-  tipografía más grande y botones más fáciles de tocar para personas sin
-  experiencia con apps.
+
+## Tres bugs que encontré y corregí mientras probaba todo esto
+
+No los reportaste, pero aparecieron al probar los cambios y los arreglé
+antes de entregarte la app:
+- El dashboard de escritorio no se veía por un error de orden en el CSS
+  (una regla que lo escondía quedaba después de la que lo mostraba).
+- Si usabas "Mercancía nueva" en Entrada y después entrabas a Conteo,
+  Salida o Consulta, la barra de búsqueda se quedaba bloqueada.
+- Un desfase de índices podía romper la lectura de Excels con filas en
+  blanco antes de los encabezados.
 
 ## Paso 1: subir los archivos a un hosting gratuito (una sola vez, con internet)
 
@@ -124,13 +129,20 @@ corregidos:
 **Opción B — Netlify Drop:** https://app.netlify.com/drop y arrastra la
 carpeta completa.
 
+> Si ya tenías la app instalada y subes una versión nueva: en el teléfono
+> te va a aparecer el banner de "Actualizar" solo. Si después de un rato
+> con internet no aparece, fuerza el refresco una vez: en Chrome, entra al
+> sitio → ⋮ → Información del sitio → Borrar datos del sitio, y vuelve a
+> abrir el link.
+
 ## Paso 2: instalar la app en el teléfono (una sola vez, con internet)
 
 1. Abre el link en Chrome (Android) o Safari (iPhone) y espera a que cargue
    por completo.
 2. Android: menú ⋮ → "Instalar aplicación". iPhone: compartir 📤 → "Agregar
    a pantalla de inicio".
-3. Desde ahora, ábrela sin necesitar conexión.
+3. Desde ahora, ábrela sin necesitar conexión. En PC, simplemente entra al
+   link desde el navegador — no hace falta instalar nada.
 
 ## Paso 3: pon tu logo, crea los usuarios y carga el Excel
 
@@ -154,60 +166,47 @@ carpeta completa.
    luego sube el archivo con las columnas: `VOLUMEN MAESTRO, VOLUMENES
    INTERMEDIOS, CODIGO, DESCRIPCIÓN, VOL. INTERMEDIOS, CANT. PZA VOL.
    INTERMEDIO, TOTAL PIEZAS, GALPÓN, SISTEMA, PEDIDO/ÍTEM, PESO NETO,
-   OBSERVACIONES, CONTEO, ENTREGADO`. Ese archivo pasa a ser la base de
-   datos de ese almacén — el CODIGO puede repetirse si tienes varios lotes
-   del mismo artículo, no hay problema. No hace falta que agregues las
+   OBSERVACIONES, CONTEO, ENTREGADO`. No hace falta que agregues las
    columnas `PERSONA`, `DEPARTAMENTO`, `TRASPASO`, `AUTORIZADO POR`,
-   `USUARIO` ni `FECHA MODIFICACIÓN` — la app las crea y las llena sola a
-   medida que se usan.
+   `UBICACIÓN`, `USUARIO` ni `FECHA MODIFICACIÓN` — la app las crea sola.
 5. **¿Tienes más de un almacén?** Repite el paso 4 con otro nombre (por
-   ejemplo "Depósito Norte") — queda guardado aparte, sin tocar el primero.
-   Para cambiar entre ellos, toca el botón del almacén arriba de Inicio en
-   cualquier momento; lo que elijas ahí es lo único que se ve y se modifica
-   hasta que vuelvas a cambiarlo.
+   ejemplo "Depósito Norte") — queda guardado aparte. Para cambiar entre
+   ellos, toca el botón del almacén arriba de Inicio en cualquier momento.
 
 ## Cómo se usa cada botón de Inicio
 
-- **Consulta:** busca un artículo (por código, descripción, galpón, sistema
-  o pedido/ítem) para ver toda su información, incluido quién fue la última
-  persona que lo modificó. Si hay varias coincidencias del mismo artículo
-  (distintos lotes), arriba se ve el total sumado. No cambia nada — es de
-  solo lectura, disponible para cualquier rol.
-- **Entrada de almacén:** cuando llega mercancía. Escribe el nombre y
-  apellido de quien la trae y el departamento que la solicita, busca el
-  artículo, indica cuánto llegó y agrégalo a la lista. Repite con todos los
-  artículos que quieras y presiona **Finalizar** para aplicar todo junto
-  (o **Limpiar lista** para descartar sin guardar nada).
-- **Salida de almacén:** igual que Entrada, pero con el nombre de quien
-  retira el material.
-- **Traspaso:** tiene dos modalidades, con un selector arriba de la
-  pantalla:
-  - **Entre galpones** (la de siempre): mueve el artículo de un galpón a
-    otro dentro del mismo almacén.
-  - **Entre almacenes** (nueva): mueve una cantidad del artículo hacia
-    *otro almacén* de los que tengas cargados en la app — resta esa
-    cantidad del almacén actual y la suma en el almacén destino (creando
-    el artículo ahí si todavía no existía). El resto de cada almacén no se
-    toca.
-  En ambos casos se pide quién autoriza el traspaso.
+- **Consulta:** busca un artículo por código, descripción, galpón, sistema,
+  pedido/ítem, ubicación, persona o departamento, y ve toda su información,
+  incluido quién fue la última persona que lo modificó. Si hay varias
+  coincidencias del mismo artículo, arriba se ve el total sumado. No
+  cambia nada — es de solo lectura, disponible para cualquier rol.
+- **Entrada de almacén:** cuando llega mercancía. Escribe quién la trae y
+  el departamento que la solicita, y elige:
+  - **Artículo existente:** busca el artículo, indica cuánto llegó.
+  - **Mercancía nueva:** para algo que no tiene código todavía — solo pide
+    descripción y total de piezas.
+  Agrega todo lo que necesites a la lista y presiona **Finalizar** (o
+  **Limpiar lista** para descartar sin guardar nada).
+- **Salida de almacén:** igual que Entrada (artículo existente), con el
+  nombre de quien retira el material.
+- **Traspaso:** selector arriba de la pantalla con dos modalidades:
+  - **Entre galpones:** mueve el artículo de un galpón a otro dentro del
+    mismo almacén.
+  - **Entre almacenes:** mueve una cantidad hacia *otro almacén* de los
+    que tengas cargados — resta del actual, suma en el destino.
+  En ambos casos se pide quién autoriza.
 - **Conteo físico:** busca el artículo, escribe la cantidad que contaste a
-  mano (esto **reemplaza** el conteo anterior, no lo suma) y, si hace
-  falta, deja una observación — por ejemplo "faltan 5 por revisar". Al
-  finalizar, se actualiza el CONTEO y las OBSERVACIONES de ese artículo.
+  mano (reemplaza el conteo anterior, no lo suma) y, si hace falta, una
+  ubicación y una observación. Si ya estaba contado, aparece en rojo y pide
+  confirmación antes de sobreescribirlo.
 
 Todas las pantallas anteriores (menos Consulta) actualizan automáticamente
-las columnas **USUARIO** y **FECHA MODIFICACIÓN** del artículo que tocaste,
-con tu usuario (el que iniciaste sesión) y la fecha/hora — así queda
-registrado directamente en los datos, sin que tengas que hacer nada extra.
+las columnas **USUARIO** y **FECHA MODIFICACIÓN** del artículo que tocaste.
 
-> **Nota sobre Traspaso "entre galpones":** en esa modalidad, cada código de
-> artículo vive en un único galpón a la vez dentro del almacén (no se
-> reparte el mismo código entre dos galpones). Si necesitas manejar el
-> mismo código en varios galpones del mismo almacén a la vez con
-> cantidades independientes, es un cambio de estructura de datos más
-> grande — avísame si quieres que lo evaluemos. La modalidad "entre
-> almacenes" sí divide cantidades libremente, porque cada almacén es una
-> base de datos separada.
+> **Nota sobre Traspaso "entre galpones":** cada código de artículo vive en
+> un único galpón a la vez dentro del almacén (no se reparte el mismo
+> código entre dos galpones). La modalidad "entre almacenes" sí divide
+> cantidades libremente, porque cada almacén es una base de datos separada.
 
 ## Sobre el botón de escanear (📷)
 
@@ -220,27 +219,17 @@ código a mano en la barra de búsqueda, que sigue funcionando siempre.
 ## Apariencia
 
 En **Ajustes** puedes elegir tema claro, oscuro, o imagen de fondo (tu logo
-u otra imagen) con una barra para controlar la transparencia.
+u otra imagen) con una barra para controlar la transparencia. Los colores
+de las 5 tarjetas de Inicio y del dashboard están como variables al
+principio de `css/styles.css` (`--card-consulta-bg`, etc.), fáciles de
+ajustar cuando me pases tu logo.
 
 ## Preguntas frecuentes
-
-**¿Puedo cambiar los colores de las 5 tarjetas de Inicio?**
-Sí — están definidos como variables al principio de `css/styles.css`
-(`--card-consulta-bg`, `--card-entrada-bg`, `--card-salida-bg`,
-`--card-traspaso-bg`, `--card-conteo-bg`, y su versión `-fg` para el color
-del texto). Ahora mismo son tonos cálidos ámbar/terracota; en cuanto me
-compartas tu logo, te dejo los tonos ajustados a él.
 
 **¿Y si no tengo forma de subir esto a GitHub?**
 Dímelo y preparamos otra vía, o te guío paso a paso con capturas.
 
-**¿Varios teléfonos o PCs pueden compartir el mismo inventario en tiempo
-real?**
-No en esta versión — como se explica arriba, cada dispositivo guarda su
-propia copia local para poder funcionar sin internet. Si necesitas que
-todos vean el mismo inventario al instante (por ejemplo, varios
-almacenistas en distintos teléfonos tocando el mismo stock a la vez), eso
-requiere un servidor central que sí dependa de internet — es un cambio de
-arquitectura, no un ajuste chico. Dímelo si te interesa explorarlo; por
-ahora, la forma de mantener todo alineado es cargar el mismo Excel
-actualizado en cada dispositivo.
+**¿El dashboard de escritorio necesita un archivo aparte?**
+No — se arma solo con los datos del almacén que tengas seleccionado, los
+mismos que ves en Consulta. Si cambias de almacén o cargas un Excel nuevo,
+el dashboard se actualiza solo.

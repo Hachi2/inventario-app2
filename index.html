@@ -92,6 +92,38 @@
       </button>
     </div>
     <button id="btn-ayuda-inicio" class="help-link"><span class="icon"></span> ¿Cómo funciona la app?</button>
+
+    <!-- Dashboard: solo se ve en pantallas anchas (PC/web), ver css @media -->
+    <section id="dashboard-desktop" class="dashboard-desktop">
+      <div class="dashboard-head">
+        <h2>Dashboard del almacén</h2>
+        <span id="dashboard-almacen-nombre" class="muted small"></span>
+      </div>
+      <div id="dashboard-sin-datos" class="empty-inline" hidden>
+        Carga un Excel en Ajustes para ver el dashboard de este almacén.
+      </div>
+      <div id="dashboard-contenido" hidden>
+        <div class="dashboard-kpis" id="dashboard-kpis"></div>
+        <div class="dashboard-charts">
+          <div class="dashboard-chart-card">
+            <h3>Stock total vs. stock final</h3>
+            <canvas id="chart-stock-vs-final"></canvas>
+          </div>
+          <div class="dashboard-chart-card">
+            <h3>Conteo vs. total (% contado)</h3>
+            <canvas id="chart-conteo-vs-total"></canvas>
+          </div>
+          <div class="dashboard-chart-card">
+            <h3>Piezas por galpón</h3>
+            <canvas id="chart-por-galpon"></canvas>
+          </div>
+          <div class="dashboard-chart-card">
+            <h3>Entregado vs. disponible</h3>
+            <canvas id="chart-entregado-vs-disponible"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- ---------- PANTALLA: CONSULTA (solo lectura) ---------- -->
@@ -135,6 +167,27 @@
     <div id="mov-autorizado-wrap" class="field" hidden>
       <span>Autorizado por</span>
       <input type="text" id="mov-autorizado-por" placeholder="Nombre y apellido">
+    </div>
+
+    <div id="entrada-tipo-toggle-wrap" class="field" hidden>
+      <span>¿Qué vas a registrar?</span>
+      <div class="segmented" id="entrada-tipo-toggle">
+        <button type="button" class="segmented-btn active" data-modo="existente">Artículo que ya existe</button>
+        <button type="button" class="segmented-btn" data-modo="nueva">Mercancía nueva / distinta</button>
+      </div>
+    </div>
+
+    <div id="entrada-nueva-wrap" class="entrada-nueva-card" hidden>
+      <p class="muted small">Esta mercancía no tiene CODIGO todavía — se agrega como un artículo nuevo a este almacén.</p>
+      <label class="field">
+        <span>Descripción</span>
+        <input type="text" id="entrada-nueva-desc" placeholder="ej. Repuesto sin catalogar">
+      </label>
+      <label class="field">
+        <span>Total de piezas</span>
+        <input type="number" id="entrada-nueva-cantidad" min="0" step="1" inputmode="numeric">
+      </label>
+      <button type="button" id="btn-agregar-nueva" class="btn btn-primary btn-block">Agregar a la lista</button>
     </div>
 
     <div id="mov-sugerencias" class="suggestion-list"></div>
@@ -396,6 +449,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/db.js"></script>
 <script src="js/auth.js"></script>
@@ -406,6 +460,7 @@
 <script src="js/movimientos.js"></script>
 <script src="js/auditoria.js"></script>
 <script src="js/usuarios.js"></script>
+<script src="js/dashboard.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

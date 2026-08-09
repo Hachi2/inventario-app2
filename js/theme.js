@@ -41,6 +41,7 @@ const Theme = {
     await DB.put("config", { clave: "tema_modo", valor: modo });
     this._marcarActivo(modo);
     document.getElementById("bg-image-controls").hidden = modo !== "image";
+    if (typeof Dashboard !== "undefined") Dashboard.render();
   },
 
   async setImagen(base64) {

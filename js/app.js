@@ -44,6 +44,7 @@ async function cargarAlmacenActual() {
   await Inventario.cargarDesdeDB();
   actualizarPillAlmacen();
   actualizarEstadoBD();
+  Dashboard.render();
 }
 
 function actualizarPillAlmacen() {
@@ -74,6 +75,7 @@ function cambiarTab(tab) {
   if (tab === "auditoria") Auditoria.render();
   if (tab === "usuarios") Usuarios.render();
   if (tab === "ajustes") actualizarEstadoBD();
+  if (tab === "home") Dashboard.render();
 }
 
 function abrirPantallaMovimiento(tipo) {
@@ -115,6 +117,7 @@ function abrirPantallaConsulta() {
   sub.textContent = "Solo consulta — no modifica nada.";
   sub.hidden = false;
   document.getElementById("header-search-row").hidden = false;
+  document.getElementById("search-input").disabled = false;
   document.getElementById("search-input").value = "";
   document.getElementById("btn-clear-search").hidden = true;
   document.getElementById("header-actions").innerHTML = "";
@@ -348,6 +351,12 @@ async function iniciar() {
   document.querySelectorAll("#traspaso-tipo-toggle .segmented-btn").forEach((btn) => {
     btn.addEventListener("click", () => Movimientos.setTraspasoModo(btn.dataset.modo));
   });
+
+  // -------- Selector de tipo de entrada (artículo existente / mercancía nueva) --------
+  document.querySelectorAll("#entrada-tipo-toggle .segmented-btn").forEach((btn) => {
+    btn.addEventListener("click", () => Movimientos.setEntradaModo(btn.dataset.modo));
+  });
+  document.getElementById("btn-agregar-nueva").addEventListener("click", () => Movimientos.agregarMercanciaNueva());
 
   // -------- Modales genéricos --------
   document.querySelectorAll(".modal-close").forEach((btn) => {

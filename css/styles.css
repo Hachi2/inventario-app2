@@ -327,11 +327,14 @@ input, select, textarea{ font-family: inherit; }
   padding: 2px 8px; border-radius:999px; white-space:nowrap;
 }
 .s-chip-stock{ background: rgba(232,169,58,0.16); color: var(--accent, #B67A1E); font-weight:600; }
+.s-chip-contado{ background: rgba(198,64,64,0.14); color: #B33A3A; font-weight:700; }
 .suggestion-item mark{ background: rgba(232,169,58,0.35); color: inherit; border-radius:3px; padding:0 1px; }
 .suggestion-item .btn-agregar{
   background: var(--accent); color: var(--accent-text); border:none; border-radius:999px;
   padding: 7px 14px; font-size:13px; font-weight:700; cursor:pointer; flex-shrink:0;
 }
+.suggestion-contada{ border-color: rgba(198,64,64,0.45); background: rgba(198,64,64,0.05); }
+.suggestion-contada .btn-agregar{ background: rgba(198,64,64,0.85); }
 
 /* ---------------- Bottom nav ---------------- */
 .bottom-nav{
@@ -400,6 +403,7 @@ body[data-theme="dark"] .editable-badge{ color: #F2B058; }
 .swatch-dark{ background: #17191C; border:1px solid #363B41; }
 .swatch-image{ background: linear-gradient(135deg, var(--card-traspaso-bg), var(--card-salida-bg)); }
 .bg-controls{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 22px; }
+.entrada-nueva-card{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
 .logo-actions{ display:flex; gap:8px; margin-top: 4px; }
 
 /* ---------------- Registro de actividad ---------------- */
@@ -439,39 +443,104 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
 }
 .banner-actualizacion .btn{ flex-shrink:0; }
 
+/* El dashboard vive oculto en el teléfono (no tiene sentido ahí: se
+   pensó para pantallas grandes). Esta regla va ANTES del @media de
+   escritorio a propósito: en CSS, con la misma especificidad, gana la
+   regla que aparece más abajo en el archivo — así la regla de escritorio
+   (que sí lo muestra) puede ganarle a esta cuando corresponda. */
+.dashboard-desktop{ display:none; margin-top: 28px; }
+
 /* ---------------- Escritorio / pantallas anchas ----------------
-   La app se diseñó mobile-first. En vez de reacomodar cada pantalla
-   para PC (lo que cambiaría el diseño que ya te gusta, incluido el
-   de Consulta), en pantallas anchas se centra ese mismo diseño en un
-   panel tipo "app", como hacen WhatsApp Web o Telegram Web. Nada de
-   lo que hay DENTRO del panel cambia — mismas tarjetas, mismos
-   colores, mismo tamaño de texto — solo deja de verse estirado de
-   punta a punta de la pantalla. */
+   En pantallas anchas la app se ve como una página web normal: barra
+   lateral de navegación + contenido. Consulta y el resto de las
+   pantallas de trabajo (Entrada, Salida, Traspaso, Conteo, Ajustes,
+   Usuarios, Registro) se quedan EXACTAMENTE con el mismo diseño que
+   ya tenías — mismas tarjetas, mismos colores, mismo ancho — solo
+   centradas dentro del espacio de contenido. Lo único que cambia de
+   verdad en escritorio es la pantalla de Inicio, que además de los
+   accesos rápidos ahora muestra el dashboard con gráficos. */
 @media (min-width: 860px){
   body{ background: var(--surface-2); }
   body[data-theme="dark"]{ background: #0F1114; }
 
   #app-shell{
-    max-width: 560px;
+    display:grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    max-width: 1240px;
     margin: 0 auto;
-    min-height: 100vh;
     box-shadow: 0 0 0 1px var(--border), 0 8px 40px rgba(20,18,14,0.12);
     background: var(--bg);
   }
   body[data-theme="image"] #app-shell{ background: transparent; }
 
-  .bottom-nav, .bottom-actionbar{
-    left:50%; right:auto; transform: translateX(-50%);
-    width:100%; max-width: 560px;
+  .topbar{ grid-column: 2; grid-row: 1; }
+  .tab-view, .pushed-view{ grid-column: 2; grid-row: 2; overflow-y:auto; }
+
+  /* Barra lateral: reusa el mismo nav de abajo del teléfono, solo
+     reacomodado — no se duplica ningún botón ni pantalla. */
+  .bottom-nav{
+    position: static; grid-column: 1; grid-row: 1 / -1;
+    flex-direction: column; align-items:stretch; justify-content:flex-start;
+    width:auto; max-width:none; height:100%;
+    border-right:1px solid var(--border); border-top:none;
+    padding: 18px 10px; gap:2px;
   }
-  .banner-actualizacion{
-    left:50%; transform: translateX(-50%); max-width:560px; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  .nav-btn{ flex-direction:row; justify-content:flex-start; gap:12px; padding:11px 14px; font-size:14px; border-radius: var(--radius-sm); }
+  .nav-btn .nav-icon{ font-size:18px; }
+  .nav-btn.active{ background: var(--surface-2); }
+
+  .bottom-actionbar{
+    left:auto; right:auto; position: static; grid-column:2; grid-row:3;
+    width:100%; max-width:none;
+  }
+  .banner-actualizacion{ border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+
+  /* Consulta y las pantallas de trabajo mantienen su ancho original,
+     centradas dentro de la columna de contenido — así no cambia nada
+     de su diseño, solo deja de estirarse de punta a punta. */
+  #view-consulta, #view-movimiento, #view-ajustes, #view-usuarios, #view-auditoria{
+    max-width: 640px; margin: 0 auto; width:100%;
   }
 
-  /* Los botones y campos siguen del mismo tamaño (a propósito, para no
-     cambiar el diseño), pero con mouse conviene un cursor y hover claros */
   .btn, .nav-btn, .home-card, .item-card, .user-item, .theme-swatch, .icon-btn{ cursor:pointer; }
   .btn:hover{ filter: brightness(0.97); }
   .home-card:hover{ filter: brightness(0.98); }
-  .nav-btn:hover{ color: var(--accent); }
+  .nav-btn:hover:not(.active){ color: var(--accent); }
+
+  /* ---- Home en escritorio: accesos rápidos + dashboard ---- */
+  #view-home{ max-width: 1080px; margin:0 auto; width:100%; }
+  .home-menu{ grid-template-columns: repeat(5, 1fr); }
+  .home-card{ flex-direction:column; align-items:flex-start; gap:10px; padding:16px 14px; }
+  .dashboard-desktop{ display:block; }
+}
+
+.dashboard-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; }
+.dashboard-head h2{ margin:0; font-size:18px; }
+.empty-inline{
+  background: var(--surface); border:1px dashed var(--border); border-radius: var(--radius);
+  padding: 26px; text-align:center; color: var(--text-muted); font-size:14px;
+}
+.dashboard-kpis{
+  display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom: 20px;
+}
+.dash-kpi{
+  background: var(--surface); border:1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; box-shadow: var(--shadow);
+}
+.dash-kpi-valor{ font-size:24px; font-weight:800; color: var(--text); }
+.dash-kpi-etiqueta{ font-size:12px; color: var(--text-muted); margin-top:4px; }
+.dash-kpi-destacado{ background: linear-gradient(135deg, var(--accent), var(--card-conteo-bg)); border:none; }
+.dash-kpi-destacado .dash-kpi-valor, .dash-kpi-destacado .dash-kpi-etiqueta{ color: var(--accent-text); }
+.dashboard-charts{
+  display:grid; grid-template-columns: 1fr 1fr; gap:16px; padding-bottom: 40px;
+}
+.dashboard-chart-card{
+  background: var(--surface); border:1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; box-shadow: var(--shadow); min-height: 280px;
+}
+.dashboard-chart-card h3{ margin:0 0 12px; font-size:14px; color: var(--text-muted); }
+@media (max-width: 1180px) and (min-width: 860px){
+  .dashboard-kpis{ grid-template-columns: repeat(2, 1fr); }
 }

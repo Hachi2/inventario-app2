@@ -96,6 +96,16 @@ const Movimientos = {
     document.getElementById("mov-destino-almacen-wrap").hidden = true;
     this._poblarSelectAlmacenes();
 
+    document.getElementById("entrada-tipo-toggle-wrap").hidden = tipo !== "entrada";
+    this.entradaModo = "existente";
+    document.querySelectorAll("#entrada-tipo-toggle .segmented-btn").forEach((b) => b.classList.toggle("active", b.dataset.modo === "existente"));
+    document.getElementById("entrada-nueva-wrap").hidden = true;
+    document.getElementById("entrada-nueva-desc").value = "";
+    document.getElementById("entrada-nueva-cantidad").value = "";
+    document.getElementById("mov-sugerencias").hidden = false;
+    document.getElementById("search-input").disabled = false;
+    document.getElementById("search-input").value = "";
+
     document.getElementById("mov-sugerencias").innerHTML = "";
     document.getElementById("mov-sin-datos").hidden = Inventario.cache.length !== 0;
     this.render();
@@ -117,6 +127,42 @@ const Movimientos = {
     document.getElementById("mov-destino-almacen-wrap").hidden = modo !== "almacen";
   },
 
+  setEntradaModo(modo) {
+    this.entradaModo = modo;
+    document.querySelectorAll("#entrada-tipo-toggle .segmented-btn").forEach((b) => b.classList.toggle("active", b.dataset.modo === modo));
+    const esNueva = modo === "nueva";
+    document.getElementById("entrada-nueva-wrap").hidden = !esNueva;
+    document.getElementById("mov-sugerencias").hidden = esNueva;
+    document.getElementById("search-input").value = "";
+    document.getElementById("search-input").disabled = esNueva;
+  },
+
+  agregarMercanciaNueva() {
+    const desc = document.getElementById("entrada-nueva-desc").value.trim();
+    const cantidadRaw = document.getElementById("entrada-nueva-cantidad").value;
+    const cantidad = Number(cantidadRaw);
+    if (!desc) {
+      mostrarToast("Escribe la descripción de la mercancía");
+      return;
+    }
+    if (cantidadRaw === "" || isNaN(cantidad) || cantidad <= 0) {
+      mostrarToast("Escribe el total de piezas");
+      return;
+    }
+    this.carrito.push({
+      id: null, // sin _id: es un artículo nuevo, se crea al Finalizar
+      nuevo: true,
+      codigo: "(nuevo)",
+      galpon: "",
+      descripcion: desc,
+      cantidad,
+    });
+    document.getElementById("entrada-nueva-desc").value = "";
+    document.getElementById("entrada-nueva-cantidad").value = "";
+    this.render();
+    mostrarToast("Agregado a la lista");
+  },
+
   /* ---------------- Búsqueda: muestra TODAS las coincidencias ---------------- */
   buscar(texto) {
     const cont = document.getElementById("mov-sugerencias");
@@ -126,7 +172,7 @@ const Movimientos = {
       return;
     }
 
-    const camposBusqueda = ["CODIGO", "DESCRIPCIÓN", "GALPÓN", "SISTEMA", "PEDIDO/ÍTEM"];
+    const camposBusqueda = ["CODIGO", "DESCRIPCIÓN", "GALPÓN", "SISTEMA", "PEDIDO/ÍTEM", "UBICACIÓN", "VOLUMEN MAESTRO"];
     const todas = Inventario.cache.filter((item) =>
       normalizarTexto(camposBusqueda.map((c) => item[c]).join(" ")).includes(q)
     );
@@ -148,26 +194,36 @@ const Movimientos = {
       ? `Mostrando ${MOSTRAR_MAX_RESULTADOS} de ${todas.length} coincidencias — sigue escribiendo para afinar.`
       : `${todas.length} coincidencia${todas.length === 1 ? "" : "s"}`;
 
+    const esConteo = this.tipoActual === "conteo";
+
     cont.innerHTML = `<p class="muted small" style="padding:2px 2px 6px;">${contadorTxt}</p>` +
       resultados.map((item) => {
+        const yaContado = esConteo && item["CONTEO"] !== "" && item["CONTEO"] != null;
         const chips = [
           item["GALPÓN"] ? `<span class="s-chip">📦 ${escapeHtml(item["GALPÓN"])}</span>` : "",
+          item["UBICACIÓN"] ? `<span class="s-chip">📍 ${escapeHtml(item["UBICACIÓN"])}</span>` : "",
           item["PEDIDO/ÍTEM"] ? `<span class="s-chip">${escapeHtml(item["PEDIDO/ÍTEM"])}</span>` : "",
           `<span class="s-chip s-chip-stock">Stock: ${item["STOCK FINAL"]}</span>`,
+          yaContado ? `<span class="s-chip s-chip-contado">Ya contado: ${item["CONTEO"]}</span>` : "",
         ].filter(Boolean).join("");
         return `
-        <div class="suggestion-item" data-id="${item._id}">
+        <div class="suggestion-item${yaContado ? " suggestion-contada" : ""}" data-id="${item._id}">
           <div class="s-info">
             <div class="s-nombre">${resaltar(item["DESCRIPCIÓN"] || item.CODIGO, texto)}</div>
-            <div class="s-codigo">${resaltar(item.CODIGO, texto)}</div>
+            <div class="s-codigo">${item.CODIGO ? resaltar(item.CODIGO, texto) : '<span class="muted">(sin código)</span>'}</div>
             <div class="s-chips">${chips}</div>
           </div>
-          <button class="btn-agregar">Agregar</button>
+          <button class="btn-agregar" data-ya-contado="${yaContado ? "1" : "0"}">Agregar</button>
         </div>`;
       }).join("");
 
     cont.querySelectorAll(".suggestion-item").forEach((el) => {
-      el.querySelector(".btn-agregar").addEventListener("click", () => this.pedirCantidad(Number(el.dataset.id)));
+      el.querySelector(".btn-agregar").addEventListener("click", (e) => {
+        if (e.currentTarget.dataset.yaContado === "1") {
+          if (!confirm("Este artículo ya fue contado. ¿Seguro que quieres volver a contarlo y reemplazar ese conteo?")) return;
+        }
+        this.pedirCantidad(Number(el.dataset.id));
+      });
     });
   },
 
@@ -332,6 +388,22 @@ const Movimientos = {
     const nombreOrigen = Almacenes.nombreActual();
 
     for (const linea of this.carrito) {
+      if (linea.nuevo) {
+        const nueva = {
+          "VOLUMEN MAESTRO": "", "VOLUMENES INTERMEDIOS": "", CODIGO: "",
+          "DESCRIPCIÓN": linea.descripcion, "VOL. INTERMEDIOS": "", "CANT. PZA VOL. INTERMEDIO": "",
+          "TOTAL PIEZAS": linea.cantidad, "GALPÓN": "", SISTEMA: "", "PEDIDO/ÍTEM": "",
+          "PESO NETO": "", OBSERVACIONES: "", CONTEO: "", ENTREGADO: 0,
+          "STOCK FINAL": linea.cantidad,
+          PERSONA: persona, DEPARTAMENTO: departamento, TRASPASO: "", "AUTORIZADO POR": "",
+          "UBICACIÓN": "", USUARIO: Auth.currentUser ? Auth.currentUser.usuario : "",
+          "FECHA MODIFICACIÓN": ahora, _almacenId: Almacenes.actualId,
+        };
+        await DB.put("inventario", nueva);
+        await Auditoria.registrar("Entrada", "(mercancía nueva)", "DESCRIPCIÓN", "-",
+          `${linea.descripcion}: ${linea.cantidad} uds (trajo: ${persona}, ${departamento})`);
+        continue;
+      }
       const item = Inventario.cache.find((i) => i._id === linea.id);
       if (!item) continue;
       const ref = `${item.CODIGO}${item["GALPÓN"] ? " · " + item["GALPÓN"] : ""}`;

@@ -3,7 +3,10 @@
    Disponible para cualquier rol, incluido Auxiliar.
    ========================================================= */
 
-const CAMPOS_BUSQUEDA_CONSULTA = ["CODIGO", "DESCRIPCIÓN", "GALPÓN", "SISTEMA", "PEDIDO/ÍTEM"];
+const CAMPOS_BUSQUEDA_CONSULTA = [
+  "CODIGO", "DESCRIPCIÓN", "GALPÓN", "SISTEMA", "PEDIDO/ÍTEM",
+  "UBICACIÓN", "VOLUMEN MAESTRO", "VOLUMENES INTERMEDIOS", "PERSONA", "DEPARTAMENTO",
+];
 
 const Consulta = {
   abrir() {
@@ -29,7 +32,7 @@ const Consulta = {
       cont.innerHTML = "";
       resumen.hidden = true;
       vacio.hidden = false;
-      vacio.textContent = "Escribe un código, descripción, galpón, sistema o pedido/ítem para consultar.";
+      vacio.textContent = "Escribe un código, descripción, galpón, sistema, pedido/ítem o ubicación para consultar.";
       return;
     }
 
@@ -88,7 +91,7 @@ const Consulta = {
       <div class="consulta-card">
         <div class="consulta-card-top">
           <div>
-            <div class="consulta-codigo">${resaltar(item.CODIGO, texto)}</div>
+            <div class="consulta-codigo">${item.CODIGO ? resaltar(item.CODIGO, texto) : '<span class="muted">(sin código)</span>'}</div>
             <div class="consulta-desc">${resaltar(item["DESCRIPCIÓN"] || "", texto)}</div>
           </div>
           <span class="stock-pill ${claseStock}">Stock: ${stock}</span>
