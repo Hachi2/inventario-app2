@@ -412,6 +412,7 @@ input, select, textarea{ font-family: inherit; }
 .nav-btn .nav-icon svg{ width:100%; height:100%; }
 .nav-btn.active{ color: var(--accent); }
 .nav-btn[hidden]{ display:none; }
+.sidebar-brand{ display:none; }
 
 /* ---------------- Barra inferior de acciones (Entrada/Salida/Traspaso) ---------------- */
 .bottom-actionbar{
@@ -494,6 +495,10 @@ body[data-theme="dark"] .editable-badge{ color: #F2B058; }
 .user-item .u-name{ font-weight:700; font-size:14.5px; }
 .user-item .u-meta{ font-size:12px; color: var(--text-muted); }
 .role-pill{ font-size:11px; padding:4px 10px; border-radius:999px; background: var(--surface-2); font-weight:700; }
+.badge-experimental{
+  font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px;
+  background: rgba(232,169,58,0.18); color: var(--accent); vertical-align:middle; margin-left:6px;
+}
 
 /* ---------------- Toast ---------------- */
 .toast{
@@ -535,29 +540,54 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
 
   #app-shell{
     display:grid;
-    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-columns: 76px minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;
     height: 100vh;
     width: 100%;
     margin: 0;
     background: var(--bg);
+    position: relative;
   }
   body[data-theme="image"] #app-shell{ background: transparent; }
 
   .topbar{ grid-column: 2; grid-row: 1; }
   .tab-view, .pushed-view{ grid-column: 2; grid-row: 2; overflow-y:auto; }
 
-  /* Barra lateral: reusa el mismo nav de abajo del teléfono, solo
-     reacomodado — no se duplica ningún botón ni pantalla. */
+  /* Barra lateral colapsada (solo el logo y los íconos) por defecto;
+     al pasar el cursor se expande sobre el contenido, sin empujarlo,
+     y muestra las etiquetas de cada opción. */
   .bottom-nav{
     position: static; grid-column: 1; grid-row: 1 / -1;
     flex-direction: column; align-items:stretch; justify-content:flex-start;
-    width:auto; max-width:none; height:100%;
+    width:76px; max-width:none; height:100%; overflow:hidden;
     border-right:1px solid var(--border); border-top:none;
-    padding: 18px 10px; gap:2px;
+    padding: 14px 10px; gap:2px;
+    transition: width .16s ease;
+    z-index: 15;
   }
-  .nav-btn{ flex-direction:row; justify-content:flex-start; gap:12px; padding:11px 14px; font-size:14px; border-radius: var(--radius-sm); }
-  .nav-btn .nav-icon{ font-size:18px; }
+  .bottom-nav:hover, .bottom-nav:focus-within{
+    width: 226px;
+    position: absolute; inset: 0 auto 0 0;
+    box-shadow: 4px 0 24px rgba(20,18,14,0.14);
+  }
+  .sidebar-brand{
+    display:flex; align-items:center; justify-content:center;
+    height:44px; margin-bottom:14px;
+  }
+  .sidebar-logo-img{ max-height:36px; max-width:44px; object-fit:contain; border-radius:8px; }
+  .sidebar-logo-fallback{
+    width:36px; height:36px; border-radius:10px; background:var(--accent); color:var(--accent-text);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex-shrink:0;
+  }
+  .nav-btn{ flex-direction:row; justify-content:center; gap:12px; padding:11px 14px; font-size:14px; border-radius: var(--radius-sm); }
+  .bottom-nav:hover .nav-btn, .bottom-nav:focus-within .nav-btn{ justify-content:flex-start; }
+  .nav-btn .nav-icon{ font-size:18px; flex-shrink:0; }
+  .nav-btn span:not(.nav-icon){
+    opacity:0; width:0; overflow:hidden; white-space:nowrap; transition: opacity .1s ease .05s;
+  }
+  .bottom-nav:hover .nav-btn span:not(.nav-icon), .bottom-nav:focus-within .nav-btn span:not(.nav-icon){
+    opacity:1; width:auto;
+  }
   .nav-btn.active{ background: var(--surface-2); }
 
   .bottom-actionbar{
@@ -607,9 +637,17 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
 }
 .dashboard-chart-card{
   background: var(--surface); border:1px solid var(--border); border-radius: var(--radius);
-  padding: 16px; box-shadow: var(--shadow); min-height: 280px;
+  padding: 16px; box-shadow: var(--shadow); min-height: 340px;
 }
 .dashboard-chart-card h3{ margin:0 0 12px; font-size:14px; color: var(--text-muted); }
+.chart-box{ position:relative; height:190px; width:100%; }
+.chart-box canvas{ position:absolute; inset:0; width:100%; height:100%; }
+.chart-legend{ display:flex; flex-direction:column; gap:6px; margin-top:14px; }
+.chart-legend-scroll{ max-height:130px; overflow-y:auto; padding-right:4px; }
+.chart-legend-item{ display:flex; align-items:center; gap:8px; font-size:12.5px; }
+.chart-legend-dot{ width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.chart-legend-label{ color: var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chart-legend-valor{ color: var(--text-muted); flex-shrink:0; }
 @media (max-width: 1180px) and (min-width: 860px){
   .dashboard-kpis{ grid-template-columns: repeat(2, 1fr); }
 }

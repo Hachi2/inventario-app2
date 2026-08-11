@@ -1,0 +1,77 @@
+// =========================================================
+// firestore.rules
+// Reglas de seguridad de Firestore — controlan quién puede leer
+// y escribir cada colección, replicando los mismos roles que ya
+// tiene la app (Coordinador/Analista/Auxiliar).
+//
+// CÓMO INSTALARLAS: en la consola de Firebase → Firestore Database
+// → pestaña "Reglas" → pega este archivo completo → "Publicar".
+// =========================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfil del usuario autenticado (rol, nombre) — un documento por
+    // usuario, con el mismo ID que su cuenta de Authentication.
+    function miPerfil() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function esGestor() {
+      return request.auth != null &&
+             miPerfil().rol in ['Coordinador', 'Analista'];
+    }
+
+    function estaAutenticado() {
+      return request.auth != null;
+    }
+
+    // ---- usuarios: cada quien lee su propio perfil; solo un gestor
+    // puede crear/editar cuentas de otros ----
+    match /usuarios/{uid} {
+      allow read: if estaAutenticado();
+      allow write: if esGestor();
+    }
+
+    // ---- almacenes: cualquier usuario autenticado puede verlos y
+    // elegir con cuál trabajar; solo un gestor puede crear uno nuevo
+    // (es decir, cargar un Excel nuevo) ----
+    match /almacenes/{almacenId} {
+      allow read: if estaAutenticado();
+      allow create, delete: if esGestor();
+      allow update: if estaAutenticado(); // ej. actualizar fecha de último uso
+    }
+
+    // ---- inventario: la fila lleva un campo "almacenId". Cualquier
+    // usuario autenticado puede leer y modificar (Consulta, Entrada,
+    // Salida, Traspaso, Conteo) — el control de qué campos puede tocar
+    // cada rol se mantiene del lado de la app, igual que ahora, porque
+    // Firestore no distingue "solo estos 3 campos" fácilmente sin
+    // duplicar mucha lógica aquí. Si más adelante quieres blindar esto
+    // también a nivel de reglas, se puede hacer campo por campo. ----
+    match /inventario/{itemId} {
+      allow read: if estaAutenticado();
+      allow write: if estaAutenticado();
+    }
+
+    // ---- auditoria: de solo agregar — nadie edita ni borra un
+    // registro de actividad ya escrito, ni siquiera un gestor ----
+    match /auditoria/{registroId} {
+      allow read: if estaAutenticado();
+      allow create: if estaAutenticado();
+      allow update, delete: if false;
+    }
+
+    // ---- _diagnostico: SOLO para el botón "Probar conexión" de
+    // Ajustes, mientras todavía no tenemos Authentication conectado al
+    // login de la app (Fase 2). No guarda ningún dato real ni sensible
+    // — un único documento de ping. Cuando la Fase 5 esté lista (login
+    // real con Firebase Authentication), esta regla se puede borrar y
+    // dejar que el diagnóstico también exija estaAutenticado(). ----
+    match /_diagnostico/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

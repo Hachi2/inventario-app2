@@ -158,6 +158,7 @@ function renderListaAlmacenes() {
       cerrarModal("modal-almacenes");
       mostrarToast(`Ahora estás en "${Almacenes.nombreActual()}"`);
       if (pantallaActual === "consulta") Consulta.abrir();
+      if (pantallaActual === "home") Dashboard.render();
     });
   });
 }
@@ -377,6 +378,18 @@ async function iniciar() {
   document.getElementById("btn-cargar-excel").addEventListener("click", abrirModalImport);
   document.getElementById("btn-descargar-excel").addEventListener("click", exportarInventario);
   document.getElementById("btn-exportar-todo").addEventListener("click", () => exportarTodoExcel());
+
+  document.getElementById("btn-probar-firebase").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-probar-firebase");
+    const estado = document.getElementById("firebase-estado");
+    boton.disabled = true;
+    estado.textContent = "Probando conexión…";
+    estado.style.color = "";
+    const resultado = await FirebaseSync.probarConexion();
+    boton.disabled = false;
+    estado.textContent = resultado.ok ? resultado.mensaje : `No se pudo conectar: ${resultado.error}`;
+    estado.style.color = resultado.ok ? "var(--ok, #2E7D32)" : "var(--danger, #C64040)";
+  });
   document.getElementById("btn-confirmar-import").addEventListener("click", async () => {
     const input = document.getElementById("import-file-input");
     const nombreInput = document.getElementById("import-almacen-nombre");
@@ -402,6 +415,7 @@ async function iniciar() {
       await Almacenes.listar();
       actualizarPillAlmacen();
       actualizarEstadoBD();
+      if (pantallaActual === "home") Dashboard.render();
       setTimeout(() => cerrarModal("modal-import"), 700);
     } catch (err) {
       status.textContent = "Error: " + err.message;

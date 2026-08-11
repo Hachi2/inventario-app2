@@ -101,6 +101,8 @@ const Logo = {
     const loginImg = document.getElementById("login-logo-img");
     const loginFallback = document.getElementById("login-logo-fallback");
     const headerLogo = document.getElementById("header-logo");
+    const sidebarImg = document.getElementById("sidebar-logo-img");
+    const sidebarFallback = document.getElementById("sidebar-logo-fallback");
 
     if (base64) {
       loginImg.src = base64;
@@ -108,10 +110,15 @@ const Logo = {
       loginFallback.hidden = true;
       headerLogo.src = base64;
       headerLogo.hidden = false;
+      sidebarImg.src = base64;
+      sidebarImg.hidden = false;
+      sidebarFallback.hidden = true;
     } else {
       loginImg.hidden = true;
       loginFallback.hidden = false;
       headerLogo.hidden = true;
+      sidebarImg.hidden = true;
+      sidebarFallback.hidden = false;
     }
   },
 
