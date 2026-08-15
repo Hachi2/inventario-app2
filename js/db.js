@@ -26,7 +26,7 @@
    ========================================================= */
 
 const DB_NAME = "InventarioOfflineDB";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const DB = {
   _db: null,
@@ -49,15 +49,10 @@ const DB = {
         if (!db.objectStoreNames.contains("config")) {
           db.createObjectStore("config", { keyPath: "clave" });
         }
-        // "almacenes": cada fila del inventario pertenece a uno, para
-        // poder cargar varias bases de datos (por ejemplo, distintos
-        // depósitos) sin que se mezclen ni se borren entre sí.
         if (!db.objectStoreNames.contains("almacenes")) {
           db.createObjectStore("almacenes", { keyPath: "id" });
         }
 
-        // "inventario" cambió de clave (antes CODIGO, ahora "_id" interno)
-        // porque el mismo CODIGO puede repetirse en varias filas del Excel.
         if (db.objectStoreNames.contains("inventario")) {
           const oldStore = tx.objectStore("inventario");
           if (oldStore.keyPath === "CODIGO") {
@@ -71,16 +66,23 @@ const DB = {
                 db.deleteObjectStore("inventario");
                 const nuevo = db.createObjectStore("inventario", { keyPath: "_id", autoIncrement: true });
                 nuevo.createIndex("CODIGO", "CODIGO", { unique: false });
+                nuevo.createIndex("_uid", "_uid", { unique: false });
                 datosPrevios.forEach((item) => {
                   delete item._id;
                   nuevo.add(item);
                 });
               }
             };
+          } else if (!oldStore.indexNames.contains("_uid")) {
+            // Ya existía de la versión anterior (con "_id" autoincremental) —
+            // solo le falta el índice "_uid", usado para emparejar cada fila
+            // con su documento en la nube (Firestore) sin duplicarla.
+            oldStore.createIndex("_uid", "_uid", { unique: false });
           }
         } else {
           const nuevo = db.createObjectStore("inventario", { keyPath: "_id", autoIncrement: true });
           nuevo.createIndex("CODIGO", "CODIGO", { unique: false });
+          nuevo.createIndex("_uid", "_uid", { unique: false });
         }
       };
 
@@ -93,6 +95,15 @@ const DB = {
   async _tx(storeName, mode) {
     const db = await this.open();
     return db.transaction(storeName, mode).objectStore(storeName);
+  },
+
+  async getByIndex(storeName, indexName, valor) {
+    const store = await this._tx(storeName, "readonly");
+    return new Promise((resolve, reject) => {
+      const req = store.index(indexName).get(valor);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
   },
 
   async getAll(storeName) {

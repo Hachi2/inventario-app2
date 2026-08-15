@@ -32,7 +32,7 @@ const FirebaseSync = {
     try {
       const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js");
       const { initializeFirestore } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
-      const { getAuth } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js");
+      const { getAuth, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js");
 
       const app = initializeApp(FIREBASE_CONFIG);
 
@@ -42,6 +42,16 @@ const FirebaseSync = {
       // internet" que ya tiene la app.
       this.db = initializeFirestore(app, { localCache: { kind: "persistent" } });
       this.auth = getAuth(app);
+
+      // Las reglas de Firestore exigen "estar autenticado" para poder
+      // leer/escribir. Como todavía NO migramos el login real de la app
+      // a Firebase Authentication (eso es la Fase 5), cada dispositivo
+      // inicia sesión de forma anónima —  sin pedirle nada a nadie — solo
+      // para que la nube lo deje leer y escribir. Esto es lo que faltaba
+      // y por eso nada se estaba sincronizando todavía: las reglas
+      // rechazaban en silencio cada intento (quedaba solo en la consola).
+      await signInAnonymously(this.auth);
+
       this._iniciado = true;
       return true;
     } catch (err) {
@@ -85,13 +95,111 @@ const FirebaseSync = {
     await updateDoc(doc(this.db, coleccion, docId), { [campo]: increment(delta) });
   },
 
+  /* ---- Fase 3: helpers genéricos de sincronización ----
+     Todos "fallan en silencio" (devuelven false / no hacen nada) si
+     Firebase no está activo o si algo sale mal — la app SIEMPRE debe
+     poder seguir trabajando con la copia local aunque la nube falle. */
+
+  async guardarDocumento(coleccion, id, datos) {
+    if (!this.activo) return false;
+    try {
+      const listo = await this.iniciar();
+      if (!listo) return false;
+      const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      await setDoc(doc(this.db, coleccion, id), datos, { merge: true });
+      return true;
+    } catch (err) {
+      console.warn(`No se pudo sincronizar con la nube (${coleccion}/${id}):`, err.message || err);
+      return false;
+    }
+  },
+
+  /* Escribe varios documentos de una sola vez (por ejemplo, todas las
+     filas de un Excel recién cargado). Se parte en grupos de 450
+     porque Firestore no permite más de 500 escrituras por lote. */
+  async guardarLote(coleccion, documentosConId) {
+    if (!this.activo || documentosConId.length === 0) return false;
+    try {
+      const listo = await this.iniciar();
+      if (!listo) return false;
+      const { doc, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      for (let i = 0; i < documentosConId.length; i += 450) {
+        const grupo = documentosConId.slice(i, i + 450);
+        const lote = writeBatch(this.db);
+        grupo.forEach(({ id, datos }) => lote.set(doc(this.db, coleccion, id), datos, { merge: true }));
+        await lote.commit();
+      }
+      return true;
+    } catch (err) {
+      console.warn(`No se pudo sincronizar el lote con la nube (${coleccion}):`, err.message || err);
+      return false;
+    }
+  },
+
+  /* Trae, de una sola vez, todos los documentos de una colección que
+     cumplan con un valor de campo (ej. todas las filas de inventario
+     de un almacén). Se usa al entrar a un almacén, para traer lo que
+     hayan cargado otros dispositivos. */
+  async obtenerPorCampo(coleccion, campo, valor) {
+    if (!this.activo) return [];
+    try {
+      const listo = await this.iniciar();
+      if (!listo) return [];
+      const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      const q = query(collection(this.db, coleccion), where(campo, "==", valor));
+      const snap = await getDocs(q);
+      const filas = [];
+      snap.forEach((d) => filas.push({ id: d.id, datos: d.data() }));
+      return filas;
+    } catch (err) {
+      console.warn(`No se pudo leer de la nube (${coleccion}):`, err.message || err);
+      return [];
+    }
+  },
+
+  async obtenerColeccion(coleccion) {
+    if (!this.activo) return [];
+    try {
+      const listo = await this.iniciar();
+      if (!listo) return [];
+      const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      const snap = await getDocs(collection(this.db, coleccion));
+      const filas = [];
+      snap.forEach((d) => filas.push({ id: d.id, datos: d.data() }));
+      return filas;
+    } catch (err) {
+      console.warn(`No se pudo leer de la nube (${coleccion}):`, err.message || err);
+      return [];
+    }
+  },
+
   /* Escucha cambios en tiempo real de un almacén — así, cuando el
      Coordinador carga o modifica algo, el resto de los dispositivos
-     conectados lo ven aparecer solos, sin recargar la página. Pendiente
-     de la Fase 3 (migrar db.js). */
-  escucharAlmacen(almacenId, callback) {
-    // Implementación pendiente — el diseño ya está definido
-    // (ver ARQUITECTURA_SYNC.md), falta conectarlo a la app real.
+     conectados lo ven aparecer solos, sin recargar la página.
+     Devuelve una función para dejar de escuchar (se llama al cambiar
+     de almacén o de pantalla, para no acumular escuchas de más). */
+  async escucharPorCampo(coleccion, campo, valor, callback) {
+    if (!this.activo) return () => {};
+    try {
+      const listo = await this.iniciar();
+      if (!listo) return () => {};
+      const { collection, query, where, onSnapshot } =
+        await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      const q = query(collection(this.db, coleccion), where(campo, "==", valor));
+      return onSnapshot(q, (snap) => {
+        // Se ignoran los cambios que salieron de este mismo dispositivo
+        // (fromCache/hasPendingWrites) para no procesar nuestro propio eco.
+        const filas = [];
+        snap.docChanges().forEach((c) => {
+          if (c.doc.metadata.hasPendingWrites) return;
+          filas.push({ id: c.doc.id, datos: c.doc.data(), tipo: c.type });
+        });
+        if (filas.length > 0) callback(filas);
+      }, (err) => console.warn(`Escucha en tiempo real interrumpida (${coleccion}):`, err.message || err));
+    } catch (err) {
+      console.warn(`No se pudo escuchar cambios en la nube (${coleccion}):`, err.message || err);
+      return () => {};
+    }
   },
 };
 

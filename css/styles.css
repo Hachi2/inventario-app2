@@ -564,7 +564,9 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
     padding: 14px 10px; gap:2px;
     transition: width .16s ease;
     z-index: 15;
+    background: #DCD6C6; /* un poco más oscura que antes, a pedido */
   }
+  body[data-theme="dark"] .bottom-nav{ background: #0B0D10; }
   .bottom-nav:hover, .bottom-nav:focus-within{
     width: 226px;
     position: absolute; inset: 0 auto 0 0;
@@ -599,8 +601,16 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
   /* Consulta y las pantallas de trabajo mantienen su ancho original,
      centradas dentro de la columna de contenido — así no cambia nada
      de su diseño, solo deja de estirarse de punta a punta. */
-  #view-consulta, #view-movimiento, #view-ajustes, #view-usuarios, #view-auditoria{
+  #view-consulta, #view-movimiento{
     max-width: 640px; margin: 0 auto; width:100%;
+  }
+
+  /* Registro, Usuarios y Ajustes sí aprovechan el ancho de la pantalla
+     (a diferencia de Consulta, que se deja angosta a propósito). Antes
+     tenían un tope de 960px que dejaba mucho espacio vacío en monitores
+     anchos — se sube a 1400px, igual que Inicio. */
+  #view-ajustes, #view-usuarios, #view-auditoria{
+    max-width: 1400px; margin: 0 auto; width:100%;
   }
 
   .btn, .nav-btn, .home-card, .item-card, .user-item, .theme-swatch, .icon-btn{ cursor:pointer; }

@@ -28,6 +28,14 @@ function calcularStockFinal(item) {
   return total - conteo - entregado;
 }
 
+/* Identificador estable, igual en todos los dispositivos, para poder
+   reconocer "esta misma fila" tanto en IndexedDB (local) como en
+   Firestore (nube) y no duplicarla al sincronizar. */
+function crearUid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "uid_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+}
+
 /* Convierte texto de celda a número, tolerando espacios, separador de
    miles ("1,234" o "1.234") y coma decimal ("12,5"). Si no puede
    interpretarlo como número, devuelve "" (igual que una celda vacía). */
@@ -59,14 +67,70 @@ function parseNumeroLibre(valor) {
 const Inventario = {
   cache: [],
   ultimaCarga: null, // { fecha, filas, usuario }
+  _detenerEscucha: null,
 
   async cargarDesdeDB() {
     await Almacenes.asegurarPorDefecto();
     const almacenId = await Almacenes.actual();
+    await this._cargarSoloLocal(almacenId);
+
+    // Fase 3: si hay conexión a la nube, trae lo que otros dispositivos
+    // hayan cargado/modificado en este almacén, y se queda escuchando
+    // cambios nuevos mientras siga elegido este almacén.
+    if (typeof FirebaseSync !== "undefined" && FirebaseSync.activo && almacenId) {
+      await this._sincronizarDesdeNube(almacenId);
+      this._escucharNube(almacenId);
+    }
+  },
+
+  async _cargarSoloLocal(almacenId) {
     const todos = await DB.getAll("inventario");
     this.cache = almacenId ? todos.filter((it) => (it._almacenId || "default") === almacenId) : [];
     const meta = almacenId ? await DB.get("config", `ultima_carga_${almacenId}`) : null;
     this.ultimaCarga = meta ? meta.valor : null;
+  },
+
+  /* Trae, una vez, todas las filas de este almacén desde Firestore y
+     las mezcla con las locales (por _uid: si ya existe, se actualiza;
+     si no, se agrega). Es lo que hace que "cargué el Excel en la PC"
+     aparezca en el teléfono la próxima vez que entra a ese almacén. */
+  async _sincronizarDesdeNube(almacenId) {
+    const remotas = await FirebaseSync.obtenerPorCampo("inventario", "_almacenId", almacenId);
+    if (remotas.length === 0) return;
+    await this._mezclarFilasRemotas(remotas.map((r) => r.datos));
+    await this._cargarSoloLocal(almacenId);
+  },
+
+  async _mezclarFilasRemotas(filas) {
+    for (const datosRemotos of filas) {
+      const local = datosRemotos._uid ? await DB.getByIndex("inventario", "_uid", datosRemotos._uid) : null;
+      if (local) {
+        await DB.put("inventario", { ...datosRemotos, _id: local._id });
+      } else {
+        const copia = { ...datosRemotos };
+        delete copia._id; // deja que IndexedDB le asigne su propio autoincrement local
+        await DB.put("inventario", copia);
+      }
+    }
+  },
+
+  /* Se queda escuchando cambios en tiempo real de este almacén mientras
+     siga siendo el elegido. Si se cambia de almacén, se corta esta
+     escucha (ver detenerEscuchaNube) para no mezclar datos de otro. */
+  async _escucharNube(almacenId) {
+    if (this._detenerEscucha) this._detenerEscucha();
+    this._detenerEscucha = await FirebaseSync.escucharPorCampo("inventario", "_almacenId", almacenId, async (filas) => {
+      await this._mezclarFilasRemotas(filas.map((f) => f.datos));
+      await this._cargarSoloLocal(almacenId);
+      document.dispatchEvent(new CustomEvent("inventario-actualizado", { detail: { origen: "nube" } }));
+    });
+  },
+
+  detenerEscuchaNube() {
+    if (this._detenerEscucha) {
+      this._detenerEscucha();
+      this._detenerEscucha = null;
+    }
   },
 
   /* ---------------- Importar ----------------
@@ -131,6 +195,7 @@ const Inventario = {
       item["USUARIO"] = "";
       item["FECHA MODIFICACIÓN"] = "";
       item["_almacenId"] = almacenId;
+      item["_uid"] = crearUid();
       return item;
     }).filter((it) => it.CODIGO);
 
@@ -149,6 +214,14 @@ const Inventario = {
     await Almacenes.fijarActual(almacenId);
     await Auditoria.registrar("Importación", null, "archivo", "-", `${nuevos.length} filas cargadas en "${nombre}"${esNuevo ? " (almacén nuevo)" : " (reemplazo)"}`);
     await this.cargarDesdeDB();
+
+    // Sube las filas nuevas a la nube (si está conectada) para que el
+    // resto de los dispositivos las vean la próxima vez que entren a
+    // este almacén, o al instante si lo tienen abierto ahora mismo.
+    if (typeof FirebaseSync !== "undefined" && FirebaseSync.activo) {
+      FirebaseSync.guardarLote("inventario", nuevos.map((it) => ({ id: it._uid, datos: it })));
+    }
+
     return { n: nuevos.length, nombre, esNuevo };
   },
 

@@ -54,42 +54,58 @@ escrituras fuera de orden, el resultado final es correcto.
 
 ## 4. Seguridad
 
-Ver `firestore.rules` — reglas ya escritas, listas para pegar en la
-consola de Firebase apenas tengamos el proyecto:
-- Cualquier operación requiere haber iniciado sesión (Firebase
-  Authentication, no la contraseña hasheada a mano que usamos hoy).
-- Crear o borrar un almacén (osea, cargar un Excel nuevo) requiere ser
-  Coordinador o Analista.
-- El registro de auditoría es de solo agregar — ni siquiera un
-  Coordinador puede editarlo o borrarlo desde la app.
+Ver `firestore.rules` — reglas ya escritas y pensadas para la situación
+real de ahora mismo: como el login por usuario todavía no está conectado
+a Firebase Authentication (eso es la Fase 5), cada dispositivo entra a la
+nube con una sesión anónima automática, así que las reglas por ahora
+solo exigen "estar autenticado" (aunque sea anónimamente), no un rol
+específico — el control de qué puede tocar cada rol lo sigue haciendo la
+app, igual que hoy. El registro de auditoría es de solo agregar — nadie
+puede editarlo ni borrarlo, ni siquiera un Coordinador.
+
+**⚠️ Cada vez que `firestore.rules` cambie en este proyecto, hay que
+volver a pegarlo en la consola de Firebase y publicarlo — ese archivo no
+se aplica solo. La primera versión de las reglas exigía un rol que la
+sesión anónima no tiene, y eso hacía que cargar un Excel nuevo se
+rechazara en silencio (por eso "no se sincronizaba"). Ya está corregido
+en el archivo, pero si tu proyecto de Firebase todavía tiene la versión
+vieja publicada, vas a seguir viendo el mismo problema hasta que
+republiques la versión de este ZIP.**
 
 ## 5. Plan de migración (para no romper nada de un día para otro)
 
-1. ✅ **Fase 1 (lista):** módulo `js/firebase-sync.js` construido.
-2. 🔄 **Fase 2 (en curso):** configuración real cargada (proyecto
-   `inventario-almacen2`). Falta que confirmes, desde **Ajustes →
-   Sincronización en la nube → Probar conexión**, que efectivamente
-   conecta desde tu navegador — yo no tengo salida a internet real desde
-   donde trabajo para probarlo por ti. Reglas de Firestore (`firestore.rules`)
-   listas para publicar en la consola de Firebase.
-3. ⏳ **Fase 3:** migrar `db.js` para que lea y escriba en Firestore en vez
-   de IndexedDB (Firestore ya trae su propio caché offline, así que en
-   la práctica se simplifica, no se complica).
-4. ⏳ **Fase 4:** botón de "subir mis datos actuales a la nube" para pasar
-   lo que ya tengas cargado localmente, una sola vez.
+1. ✅ **Fase 1:** módulo `js/firebase-sync.js` construido.
+2. ✅ **Fase 2:** configuración real cargada (proyecto
+   `inventario-almacen2`), conexión probada.
+3. ✅ **Fase 3 (recién terminada):** `db.js`, `almacenes.js`,
+   `inventario.js` y `movimientos.js` ya leen y escriben en Firestore de
+   verdad — cargar un Excel, hacer una Entrada/Salida/Traspaso/Conteo, o
+   crear un almacén nuevo se sube solo a la nube, y los demás
+   dispositivos lo reciben en tiempo real (mientras tengan ese almacén
+   abierto) o la próxima vez que entren a él. Todo probado con dos
+   sesiones de navegador independientes simulando dos dispositivos.
+4. ⏳ **Fase 4:** botón de "subir mis datos actuales a la nube" para
+   pasar lo que ya tengas cargado localmente en cada dispositivo, una
+   sola vez (para no perder nada de lo que ya cargaste antes de esta
+   fase).
 5. ⏳ **Fase 5:** apagar el sistema de usuarios hecho a mano, dejar
-   Firebase Authentication como único método de login.
+   Firebase Authentication como único método de login — esto es lo que
+   permitiría, además, endurecer `firestore.rules` para exigir el rol
+   correcto de cada quien.
 
 Cada fase se prueba y se entrega por separado — no vamos a reemplazar
 todo de un salto.
 
-## 6. Cómo probar la Fase 2
+## 6. Cómo confirmar que la Fase 3 funciona en tus dispositivos reales
 
-1. Sube esta versión a tu hosting (GitHub Pages/Netlify) como siempre.
-2. En la consola de Firebase, pega el contenido de `firestore.rules` en
-   Firestore Database → pestaña "Reglas" → Publicar (si todavía no lo
-   hiciste, la prueba de conexión va a fallar por permisos).
-3. Abre la app → Ajustes → Sincronización en la nube → **Probar
-   conexión**. Debería decir "Conectado — escritura y lectura
-   confirmadas" con la fecha y hora. Si da error, cópiame el mensaje
-   exacto y lo resolvemos.
+1. Sube esta versión a tu hosting.
+2. **Vuelve a publicar `firestore.rules`** en la consola de Firebase
+   (Firestore Database → Reglas → pegar → Publicar) — es el paso que más
+   se olvida y el que más causa "no sincroniza".
+3. En un dispositivo (o pestaña), carga un Excel en un almacén con un
+   nombre que no hayas usado antes.
+4. En otro dispositivo (o pestaña de incógnito), entra a la app,
+   selecciona ese mismo almacén — deberías ver los mismos datos.
+5. Si no aparece, abre la consola del navegador (F12 → pestaña Console)
+   y buscá mensajes que empiecen con "No se pudo sincronizar" o "No se
+   pudo leer de la nube" — cópiame el texto exacto, ahí dice la causa.

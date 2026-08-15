@@ -220,7 +220,11 @@ const Movimientos = {
     cont.querySelectorAll(".suggestion-item").forEach((el) => {
       el.querySelector(".btn-agregar").addEventListener("click", (e) => {
         if (e.currentTarget.dataset.yaContado === "1") {
-          if (!confirm("Este artículo ya fue contado. ¿Seguro que quieres volver a contarlo y reemplazar ese conteo?")) return;
+          if (!Auth.isGestor()) {
+            mostrarToast("Este artículo ya fue contado. Solo un Coordinador o Analista puede corregirlo.");
+            return;
+          }
+          if (!confirm("Este artículo ya fue contado. ¿Seguro que quieres corregirlo y reemplazar ese conteo?")) return;
         }
         this.pedirCantidad(Number(el.dataset.id));
       });
@@ -397,11 +401,12 @@ const Movimientos = {
           "STOCK FINAL": linea.cantidad,
           PERSONA: persona, DEPARTAMENTO: departamento, TRASPASO: "", "AUTORIZADO POR": "",
           "UBICACIÓN": "", USUARIO: Auth.currentUser ? Auth.currentUser.usuario : "",
-          "FECHA MODIFICACIÓN": ahora, _almacenId: Almacenes.actualId,
+          "FECHA MODIFICACIÓN": ahora, _almacenId: Almacenes.actualId, _uid: crearUid(),
         };
         await DB.put("inventario", nueva);
         await Auditoria.registrar("Entrada", "(mercancía nueva)", "DESCRIPCIÓN", "-",
           `${linea.descripcion}: ${linea.cantidad} uds (trajo: ${persona}, ${departamento})`);
+        actualizados.push(nueva);
         continue;
       }
       const item = Inventario.cache.find((i) => i._id === linea.id);
@@ -487,9 +492,13 @@ const Movimientos = {
       existente["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";
       existente["FECHA MODIFICACIÓN"] = ahora;
       await DB.put("inventario", existente);
+      this._sincronizarItem(existente);
+      await Auditoria.registrar("Traspaso", `${existente.CODIGO}${existente["GALPÓN"] ? " · " + existente["GALPÓN"] : ""}`,
+        "TOTAL PIEZAS", antesDestino, `${existente["TOTAL PIEZAS"]} (llegaron ${linea.cantidad} desde "${nombreOrigen}", autorizó: ${autorizadoPor})`);
     } else {
       const nueva = { ...item };
       delete nueva._id;
+      nueva._uid = crearUid();
       nueva._almacenId = almacenDestinoId;
       nueva["TOTAL PIEZAS"] = linea.cantidad;
       nueva["CONTEO"] = "";
@@ -500,10 +509,26 @@ const Movimientos = {
       nueva["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";
       nueva["FECHA MODIFICACIÓN"] = ahora;
       await DB.put("inventario", nueva);
+      this._sincronizarItem(nueva);
+      await Auditoria.registrar("Traspaso", `${nueva.CODIGO}${nueva["GALPÓN"] ? " · " + nueva["GALPÓN"] : ""} (nuevo en este almacén)`,
+        "TOTAL PIEZAS", "-", `${linea.cantidad} (llegaron desde "${nombreOrigen}", autorizó: ${autorizadoPor})`);
     }
 
     await Auditoria.registrar("Traspaso", ref, "TOTAL PIEZAS", antes,
       `${item["TOTAL PIEZAS"]} (se enviaron ${linea.cantidad} a "${almacenDestino.nombre}", autorizó: ${autorizadoPor})`);
+  },
+
+  /* Empuja un artículo modificado a la nube (si está conectada), sin
+     bloquear ni romper nada si falla — la copia local ya quedó guardada
+     de todas formas. Genera un _uid si a la fila todavía le faltaba
+     (por ejemplo, datos de antes de esta versión). */
+  _sincronizarItem(item) {
+    if (typeof FirebaseSync === "undefined" || !FirebaseSync.activo) return;
+    if (!item._uid) {
+      item._uid = crearUid();
+      DB.put("inventario", item);
+    }
+    FirebaseSync.guardarDocumento("inventario", item._uid, item);
   },
 };
 

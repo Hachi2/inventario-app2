@@ -43,6 +43,14 @@ const Dashboard = {
 
     this._renderKpis();
     this._renderCharts();
+    // Si algún canvas se dibujó con tamaño cero (por ejemplo, la
+    // primera vez que se entra a un almacén y el navegador todavía no
+    // terminó de acomodar el layout), se reintenta una vez más.
+    requestAnimationFrame(() => {
+      const algunoSinDibujar = [...document.querySelectorAll(".chart-box canvas")]
+        .some((c) => c.clientWidth > 0 && c.width === 0);
+      if (algunoSinDibujar) this._renderCharts();
+    });
 
     // Si la ventana cambia de tamaño (o el usuario expande/colapsa la
     // barra lateral), los canvas deben redibujarse a su nuevo tamaño.

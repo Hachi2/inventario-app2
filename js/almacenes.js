@@ -11,6 +11,16 @@ const Almacenes = {
   cacheLista: [],
 
   async listar() {
+    // Trae primero lo que haya en la nube (por ejemplo, un almacén que
+    // el Coordinador acaba de crear desde otro dispositivo) y lo mezcla
+    // con lo local, antes de mostrar la lista.
+    if (typeof FirebaseSync !== "undefined" && FirebaseSync.activo) {
+      const remotos = await FirebaseSync.obtenerColeccion("almacenes");
+      for (const { id, datos } of remotos) {
+        const local = await DB.get("almacenes", id);
+        if (!local) await DB.put("almacenes", { id, ...datos });
+      }
+    }
     this.cacheLista = await DB.getAll("almacenes");
     this.cacheLista.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
     return this.cacheLista;
@@ -58,9 +68,13 @@ const Almacenes = {
   },
 
   async crear(nombre) {
-    const id = "alm_" + Date.now();
-    await DB.put("almacenes", { id, nombre, fecha: new Date().toISOString() });
+    const id = "alm_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+    const datos = { id, nombre, fecha: new Date().toISOString() };
+    await DB.put("almacenes", datos);
     await this.listar();
+    if (typeof FirebaseSync !== "undefined" && FirebaseSync.activo) {
+      FirebaseSync.guardarDocumento("almacenes", id, datos);
+    }
     return id;
   },
 

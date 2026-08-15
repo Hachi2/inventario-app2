@@ -29,6 +29,13 @@ const MiniChart = {
     const cx = w / 2, cy = h / 2;
     const radio = Math.min(w, h) / 2 - 4;
 
+    // Si el canvas todavía no tiene un tamaño real (por ejemplo, la
+    // tarjeta se está mostrando justo en este instante y el navegador
+    // no terminó de calcular el layout), no hay nada que dibujar
+    // todavía — se evita el error de "radio negativo" y simplemente se
+    // reintentará en el próximo render() (cambio de almacén, resize, etc.).
+    if (radio <= 0) return;
+
     if (total <= 0 || segmentos.length === 0) {
       ctx.beginPath();
       ctx.arc(cx, cy, radio, 0, Math.PI * 2);
