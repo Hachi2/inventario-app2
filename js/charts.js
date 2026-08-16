@@ -21,7 +21,7 @@ const MiniChart = {
     const colorTexto = opciones.colorTexto || "#23221E";
     const total = segmentos.reduce((s, seg) => s + Math.max(seg.valor, 0), 0);
 
-    this._prepararCanvas(canvas);
+    if (!this._prepararCanvas(canvas)) return;
     const ctx = canvas.getContext("2d");
     const w = canvas.clientWidth, h = canvas.clientHeight;
     ctx.clearRect(0, 0, w, h);
@@ -81,15 +81,85 @@ const MiniChart = {
 
   /* Ajusta la resolución interna del canvas a la densidad de píxeles
      de la pantalla, para que no se vea borroso ni pixelado. */
+  /* Barras verticales con las puntas redondeadas — para listas
+     ordenadas (ej. "cuál producto tiene más disponible"). La barra
+     con el valor más alto se resalta en el color de acento; el resto
+     queda en un tono neutro, igual que el gráfico "Statistics" de
+     referencia (una sola barra del día resaltada entre las demás). */
+  barras(canvas, items, opciones = {}) {
+    const colorTexto = opciones.colorTexto || "#23221E";
+    const colorMuted = opciones.colorMuted || "rgba(120,115,105,0.18)";
+    const colorDestacado = opciones.colorDestacado || "#E8A93A";
+
+    if (!this._prepararCanvas(canvas)) return;
+    const ctx = canvas.getContext("2d");
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    if (!items.length) return;
+
+    const max = Math.max(...items.map((i) => i.valor), 1);
+    const espacioEtiqueta = 34;
+    const espacioValor = 18;
+    const areaAlto = h - espacioEtiqueta - espacioValor;
+    const n = items.length;
+    const gap = 10;
+    const anchoBarra = Math.min(34, (w - gap * (n + 1)) / n);
+    const anchoTotal = anchoBarra * n + gap * (n + 1);
+    const offsetX = (w - anchoTotal) / 2;
+
+    ctx.font = "600 10.5px Arial, sans-serif";
+    ctx.textAlign = "center";
+
+    items.forEach((item, i) => {
+      const x = offsetX + gap + i * (anchoBarra + gap);
+      const altoBarra = Math.max((item.valor / max) * areaAlto, 3);
+      const y = espacioValor + (areaAlto - altoBarra);
+      const esMax = item.valor === max;
+
+      ctx.fillStyle = esMax ? colorDestacado : colorMuted;
+      this._rectRedondeado(ctx, x, y, anchoBarra, altoBarra, 6);
+      ctx.fill();
+
+      ctx.fillStyle = colorTexto;
+      ctx.fillText(item.valor.toLocaleString("es"), x + anchoBarra / 2, y - 6);
+
+      ctx.fillStyle = "#8A857A";
+      ctx.font = "500 10px Arial, sans-serif";
+      const etiqueta = item.label.length > 8 ? item.label.slice(0, 7) + "…" : item.label;
+      ctx.fillText(etiqueta, x + anchoBarra / 2, h - 10);
+      ctx.font = "600 10.5px Arial, sans-serif";
+    });
+  },
+
+  _rectRedondeado(ctx, x, y, w, h, r) {
+    const radio = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radio, y);
+    ctx.lineTo(x + w - radio, y);
+    ctx.arcTo(x + w, y, x + w, y + radio, radio);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.lineTo(x, y + radio);
+    ctx.arcTo(x, y, x + radio, y, radio);
+    ctx.closePath();
+  },
+
   _prepararCanvas(canvas) {
     const dpr = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth || canvas.parentElement.clientWidth || 220;
-    const h = canvas.clientHeight || 220;
+    const w = canvas.clientWidth || canvas.parentElement.clientWidth || 0;
+    const h = canvas.clientHeight || 0;
+    // Un canvas oculto (display:none en algún ancestro, por ejemplo al
+    // cambiar a la vista "Sin gráficos") mide 0×0 — dibujar ahí no
+    // sirve de nada y además rompe la geometría (radios negativos), así
+    // que se avisa a quien llama que no hay nada que dibujar todavía.
+    if (w < 10 || h < 10) return false;
     if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       canvas.getContext("2d").scale(dpr, dpr);
     }
+    return true;
   },
 
   _pintarLeyenda(contenedor, segmentos, total) {

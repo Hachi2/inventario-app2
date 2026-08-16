@@ -28,6 +28,8 @@ function mostrarApp() {
   document.getElementById("app-shell").hidden = false;
 
   document.getElementById("home-nombre").textContent = Auth.currentUser.nombre;
+  document.getElementById("home-avatar").textContent = (Auth.currentUser.nombre || "?").trim().charAt(0).toUpperCase();
+  document.getElementById("home-rol-pill").textContent = Auth.currentUser.rol;
   document.querySelector('.nav-btn[data-tab="usuarios"]').hidden = !Auth.isGestor();
 
   // Un Auxiliar no gestiona Entrada ni Traspaso (afectan columnas que no puede editar)
@@ -378,6 +380,11 @@ async function iniciar() {
   document.getElementById("btn-cargar-excel").addEventListener("click", abrirModalImport);
   document.getElementById("btn-descargar-excel").addEventListener("click", exportarInventario);
   document.getElementById("btn-exportar-todo").addEventListener("click", () => exportarTodoExcel());
+
+  document.getElementById("btn-dashboard-exportar").addEventListener("click", () => Inventario.exportarExcel());
+  document.querySelectorAll(".vista-btn").forEach((btn) => {
+    btn.addEventListener("click", () => Dashboard.aplicarVista(btn.dataset.vista));
+  });
 
   document.getElementById("btn-probar-firebase").addEventListener("click", async () => {
     const boton = document.getElementById("btn-probar-firebase");

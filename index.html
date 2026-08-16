@@ -61,8 +61,11 @@
   <!-- ---------- TAB: INICIO ---------- -->
   <main id="view-home" class="view tab-view active">
     <div class="home-greeting">
-      <h1>Bienvenido, <span id="home-nombre">—</span></h1>
-      <p>¿Qué deseas hacer?</p>
+      <span id="home-avatar" class="home-avatar">—</span>
+      <div>
+        <h1>Bienvenido, <span id="home-nombre">—</span></h1>
+        <p>¿Qué deseas hacer? <span id="home-rol-pill" class="role-pill role-pill-inline"></span></p>
+      </div>
     </div>
     <button id="btn-almacen-actual" class="almacen-pill">
       <span class="nav-icon" id="almacen-pill-icon"></span>
@@ -93,16 +96,57 @@
     </div>
     <button id="btn-ayuda-inicio" class="help-link"><span class="icon"></span> ¿Cómo funciona la app?</button>
 
-    <!-- Dashboard: solo se ve en pantallas anchas (PC/web), ver css @media -->
-    <section id="dashboard-desktop" class="dashboard-desktop">
+    <!-- Dashboard: ahora visible tanto en PC como en el teléfono -->
+    <section id="dashboard-desktop" class="dashboard-desktop" data-vista="cuadro">
       <div class="dashboard-head">
-        <h2>Dashboard del almacén</h2>
-        <span id="dashboard-almacen-nombre" class="muted small"></span>
+        <div>
+          <h2>Dashboard del almacén</h2>
+          <p class="dashboard-subtitulo">Resumen y actividad de <span id="dashboard-almacen-nombre"></span></p>
+        </div>
+        <button id="btn-dashboard-exportar" class="btn btn-secondary btn-sm">Exportar</button>
       </div>
+
+      <div class="vista-selector">
+        <button class="vista-btn active" data-vista="cuadro">▦ Cuadro</button>
+        <button class="vista-btn" data-vista="lista">☰ Lista</button>
+        <button class="vista-btn" data-vista="sin-graficos">Sin gráficos</button>
+      </div>
+
       <div id="dashboard-sin-datos" class="empty-inline" hidden>
         Carga un Excel en Ajustes para ver el dashboard de este almacén.
       </div>
       <div id="dashboard-contenido" hidden>
+
+        <!-- Fila superior estilo "bento", inspirada en la imagen de
+             referencia — solo se ve en pantallas de escritorio anchas.
+             No reemplaza nada de abajo, es un primer vistazo extra. -->
+        <div class="dashboard-bento">
+          <div class="bento-col">
+            <div class="dash-kpi dash-kpi-destacado bento-hero">
+              <div class="dash-kpi-valor" id="bento-total-piezas">—</div>
+              <div class="dash-kpi-etiqueta">Total piezas</div>
+            </div>
+            <div class="dash-kpi bento-hero-sec">
+              <div class="dash-kpi-valor" id="bento-stock-final">—</div>
+              <div class="dash-kpi-etiqueta">Stock final</div>
+            </div>
+          </div>
+          <div class="dash-kpi bento-progreso">
+            <div class="bento-progreso-cabecera">
+              <span>Avance de conteo</span>
+            </div>
+            <div class="bento-progreso-valor" id="bento-conteo-valor">—</div>
+            <div class="bento-progreso-barra"><div id="bento-conteo-barra" class="bento-progreso-relleno"></div></div>
+            <p class="muted small" id="bento-conteo-sub">contado sobre el total de piezas</p>
+          </div>
+          <div class="dash-kpi bento-gauge-card">
+            <div class="chart-box bento-gauge-box">
+              <canvas id="chart-bento-gauge"></canvas>
+            </div>
+            <p class="muted small" id="bento-gauge-sub">% del stock ya contado</p>
+          </div>
+        </div>
+
         <div class="dashboard-kpis" id="dashboard-kpis"></div>
         <div class="dashboard-charts">
           <div class="dashboard-chart-card">
@@ -124,7 +168,6 @@
             <div class="chart-box">
               <canvas id="chart-por-galpon"></canvas>
             </div>
-            <div id="leyenda-por-galpon" class="chart-legend chart-legend-scroll"></div>
           </div>
           <div class="dashboard-chart-card">
             <h3>Total de piezas vs. conteo (% contado)</h3>
@@ -133,6 +176,11 @@
             </div>
             <div id="leyenda-entregado-vs-disponible" class="chart-legend"></div>
           </div>
+        </div>
+
+        <div class="dashboard-actividad-card">
+          <h3>Últimos movimientos</h3>
+          <div id="dashboard-actividad"></div>
         </div>
       </div>
     </section>

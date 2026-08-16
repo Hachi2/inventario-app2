@@ -40,6 +40,10 @@ const Dashboard = {
     }
     sinDatos.hidden = true;
     cont.hidden = false;
+    document.getElementById("dashboard-desktop").setAttribute("data-vista", this.vistaActual());
+    document.querySelectorAll(".vista-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.vista === this.vistaActual());
+    });
 
     this._renderKpis();
     this._renderCharts();
@@ -100,6 +104,17 @@ const Dashboard = {
         <div class="dash-kpi-valor">${t.valor}</div>
         <div class="dash-kpi-etiqueta">${t.etiqueta}</div>
       </div>`).join("");
+
+    // Fila "bento" de arriba (solo visible en escritorio, ver CSS)
+    const bentoHero = document.getElementById("bento-total-piezas");
+    if (bentoHero) {
+      bentoHero.textContent = totalPiezas.toLocaleString("es");
+      document.getElementById("bento-stock-final").textContent = totalStockFinal.toLocaleString("es");
+      document.getElementById("bento-conteo-valor").textContent = totalConteo.toLocaleString("es");
+      document.getElementById("bento-conteo-barra").style.width = `${Math.min(porcContado, 100).toFixed(0)}%`;
+      document.getElementById("bento-conteo-sub").textContent =
+        `${porcContado.toFixed(0)}% contado sobre ${totalPiezas.toLocaleString("es")} piezas totales`;
+    }
   },
 
   /* Agrupa por DESCRIPCIÓN (o CODIGO si no hay descripción), sumando
@@ -163,21 +178,89 @@ const Dashboard = {
     this._donaProgreso("chart-conteo-vs-total", "leyenda-conteo-vs-total", tema, totalEntregado, totalPiezas, tema.paleta[2], "Entregado");
 
     // 3) Cantidad disponible por producto (Disponible = Total - Entregado,
-    //    es decir, basada en las salidas/entregas — como se pidió)
+    //    es decir, basada en las salidas/entregas — como se pidió). En
+    //    forma de barras (como el gráfico "Statistics" de referencia),
+    //    con el producto de mayor disponibilidad resaltado.
     const porProducto = this._agruparPorProducto()
       .map(([nombre, v]) => ({ label: nombre, valor: Math.max(v.total - v.entregado, 0) }))
       .sort((a, b) => b.valor - a.valor)
-      .slice(0, 8);
+      .slice(0, 6);
     const canvasProducto = document.getElementById("chart-por-galpon");
     if (canvasProducto) {
-      MiniChart.dona(
-        canvasProducto,
-        porProducto.map((p, i) => ({ label: p.label, valor: p.valor, color: tema.paleta[i % tema.paleta.length] })),
-        { cutout: 0.55, colorHueco: tema.colorTarjeta, leyenda: document.getElementById("leyenda-por-galpon") }
-      );
+      MiniChart.barras(canvasProducto, porProducto, {
+        colorTexto: tema.texto,
+        colorMuted: tema.muted,
+        colorDestacado: tema.paleta[0],
+      });
     }
 
     // 4) Total de piezas vs Conteo, con el % contado en el centro
     this._donaProgreso("chart-entregado-vs-disponible", "leyenda-entregado-vs-disponible", tema, totalConteo, totalPiezas, tema.paleta[1], "Contado");
+
+    // Gauge del bloque "bento" de arriba (mismo dato que el KPI
+    // destacado, presentado como gráfico — solo visible en escritorio)
+    const canvasGauge = document.getElementById("chart-bento-gauge");
+    if (canvasGauge) {
+      this._donaProgreso("chart-bento-gauge", null, tema, totalConteo, totalPiezas, tema.paleta[1], "Contado");
+    }
+
+    this._renderActividad();
+  },
+
+  /* "Últimos movimientos" — lista corta de lo último que pasó en ESTE
+     almacén (se filtra por los códigos que existen en el almacén
+     actual, ya que el registro de auditoría no guarda a qué almacén
+     pertenece cada línea). Inspirado en la lista "Most Order by
+     Country" de la referencia: iniciales a modo de avatar + acción +
+     una etiqueta con el detalle. */
+  async _renderActividad() {
+    const cont = document.getElementById("dashboard-actividad");
+    if (!cont) return;
+    const codigos = new Set(Inventario.cache.map((i) => i.CODIGO).filter(Boolean));
+    const todos = (await DB.getAll("auditoria")).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    const relevantes = todos
+      .filter((r) => !r.codigoItem || codigos.has(r.codigoItem.split(" ")[0]) || ["Importación", "Exportación"].includes(r.accion))
+      .slice(0, 5);
+
+    if (relevantes.length === 0) {
+      cont.innerHTML = `<p class="muted small" style="padding:8px 0;">Sin movimientos recientes en este almacén.</p>`;
+      return;
+    }
+
+    cont.innerHTML = relevantes.map((r) => {
+      const inicial = (r.nombre || r.usuario || "?").trim().charAt(0).toUpperCase();
+      const fecha = new Date(r.fecha).toLocaleString("es", { dateStyle: "short", timeStyle: "short" });
+      const detalle = r.codigoItem ? `${r.accion} · ${r.codigoItem}` : r.accion;
+      return `
+        <div class="actividad-item">
+          <span class="actividad-avatar">${inicial}</span>
+          <div class="actividad-texto">
+            <span class="actividad-nombre">${escapeHtml(r.nombre || r.usuario)}</span>
+            <span class="actividad-detalle">${escapeHtml(detalle)}</span>
+          </div>
+          <span class="actividad-chip">${escapeHtml(fecha)}</span>
+        </div>`;
+    }).join("");
+  },
+
+  /* ---- Selector de vista en el teléfono: Cuadro / Lista / Sin gráficos.
+     Se guarda en localStorage porque es solo una preferencia visual de
+     este dispositivo, no un dato del almacén. ---- */
+  VISTA_KEY: "inventario_dashboard_vista",
+
+  vistaActual() {
+    return localStorage.getItem(this.VISTA_KEY) || "cuadro";
+  },
+
+  aplicarVista(vista) {
+    localStorage.setItem(this.VISTA_KEY, vista);
+    const cont = document.getElementById("dashboard-desktop");
+    if (cont) cont.setAttribute("data-vista", vista);
+    document.querySelectorAll(".vista-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.vista === vista);
+    });
+    // Los canvas necesitan volver a dibujarse a su nuevo tamaño apenas
+    // el layout de la nueva vista termine de acomodarse.
+    requestAnimationFrame(() => { if (Inventario.cache.length) this._renderCharts(); });
   },
 };

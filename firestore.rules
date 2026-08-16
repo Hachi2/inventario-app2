@@ -6,6 +6,24 @@
 //
 // CÓMO INSTALARLAS: en la consola de Firebase → Firestore Database
 // → pestaña "Reglas" → pega este archivo completo → "Publicar".
+//
+// NOTA DE SEGURIDAD — por qué "que no se vea el código" no es la
+// forma de proteger esto: cualquier página web (esta incluida) se
+// puede inspeccionar desde el navegador — es así como funciona la
+// web, ninguna app hecha en HTML/JS puede evitarlo, ni ofuscando ni
+// minificando el código (eso solo lo hace más feo de leer, no
+// imposible). Por eso la seguridad real nunca depende de esconder el
+// código: depende de qué puede hacer alguien con los datos aunque
+// tenga el código completo delante — y eso es exactamente lo que
+// controla este archivo, del lado del servidor de Firebase, no del
+// navegador de nadie. Dos capas más, cuando quieras subir el nivel:
+//  1) Firebase App Check (gratis): verifica que cada pedido a
+//     Firestore venga de verdad de esta app y no de alguien que copió
+//     la clave y escribe directo con un script — se activa desde la
+//     consola de Firebase, sin tocar este archivo.
+//  2) Fase 5 del plan (login real con Firebase Authentication):
+//     recién ahí estas reglas pueden exigir el rol correcto de cada
+//     quien, en vez de solo "estar autenticado" en general.
 // =========================================================
 
 rules_version = '2';
@@ -41,7 +59,16 @@ service cloud.firestore {
     }
 
     match /inventario/{itemId} {
-      allow read, write: if estaAutenticado();
+      allow read: if estaAutenticado();
+      // Validación mínima: toda fila de inventario debe traer a qué
+      // almacén pertenece. No evita que alguien con malas intenciones
+      // escriba datos falsos (eso lo resuelve la Fase 5 + App Check,
+      // ver la nota de seguridad al principio de este archivo) — pero
+      // sí evita que un error de programación deje filas "huérfanas"
+      // sin almacén, que romperían las búsquedas.
+      allow write: if estaAutenticado() &&
+                      request.resource.data._almacenId is string &&
+                      request.resource.data._almacenId.size() > 0;
     }
 
     // ---- auditoria: de solo agregar — nadie edita ni borra un

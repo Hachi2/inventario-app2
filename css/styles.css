@@ -276,9 +276,16 @@ input, select, textarea{ font-family: inherit; }
 .section-actions{ display:flex; gap:8px; }
 
 /* ---------------- Pantalla de Inicio ---------------- */
-.home-greeting{ padding: 10px 2px 6px; }
+.home-greeting{ padding: 10px 2px 6px; display:flex; align-items:center; gap:14px; }
 .home-greeting h1{ font-size: 26px; margin: 0 0 4px; letter-spacing:-0.01em; }
-.home-greeting p{ margin:0; color: var(--text-muted); font-size:15px; }
+.home-greeting p{ margin:0; color: var(--text-muted); font-size:15px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.home-avatar{
+  width:52px; height:52px; border-radius:50%; flex-shrink:0;
+  background: linear-gradient(135deg, var(--accent), var(--card-traspaso-bg));
+  color: var(--accent-text); display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:20px; box-shadow: var(--shadow);
+}
+.role-pill-inline{ background: var(--surface-2); }
 
 .home-menu{ display:grid; grid-template-columns: 1fr; gap: 14px; margin-top: 20px; }
 .home-card{
@@ -518,12 +525,12 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
 }
 .banner-actualizacion .btn{ flex-shrink:0; }
 
-/* El dashboard vive oculto en el teléfono (no tiene sentido ahí: se
-   pensó para pantallas grandes). Esta regla va ANTES del @media de
-   escritorio a propósito: en CSS, con la misma especificidad, gana la
-   regla que aparece más abajo en el archivo — así la regla de escritorio
-   (que sí lo muestra) puede ganarle a esta cuando corresponda. */
-.dashboard-desktop{ display:none; margin-top: 28px; }
+/* El dashboard ahora se ve en cualquier tamaño de pantalla — antes
+   solo aparecía en PC; se pidió que también se pueda ver desde el
+   teléfono, así que se apilan los gráficos en una sola columna en
+   pantallas angostas (ver el bloque "Dashboard en el teléfono" más
+   abajo) en vez de ocultarlo por completo. */
+.dashboard-desktop{ display:block; margin-top: 28px; }
 
 /* ---------------- Escritorio / pantallas anchas ----------------
    En pantallas anchas la app se ve como una página web normal: barra
@@ -622,15 +629,44 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
   #view-home{ max-width: 1400px; margin:0 auto; width:100%; }
   .home-menu{ grid-template-columns: repeat(5, 1fr); }
   .home-card{ flex-direction:column; align-items:flex-start; gap:10px; padding:16px 14px; }
-  .dashboard-desktop{ display:block; }
 }
 
-.dashboard-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; }
+.dashboard-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
 .dashboard-head h2{ margin:0; font-size:18px; }
+.dashboard-subtitulo{ margin:2px 0 0; font-size:12.5px; color: var(--text-muted); }
 .empty-inline{
   background: var(--surface); border:1px dashed var(--border); border-radius: var(--radius);
   padding: 26px; text-align:center; color: var(--text-muted); font-size:14px;
 }
+/* ---- Fila "bento" superior (inspirada en la referencia), solo en
+   escritorio — ver regla @media más abajo que la muestra. ---- */
+.dashboard-bento{ display:none; }
+@media (min-width: 860px){
+  .dashboard-bento{
+    display:grid; grid-template-columns: 1.1fr 1.3fr 1fr; gap:16px; margin-bottom:20px;
+  }
+  .bento-col{ display:flex; flex-direction:column; gap:12px; }
+  .bento-hero{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .bento-hero .dash-kpi-valor{ font-size:32px; }
+  .bento-hero-sec{
+    flex:1; background: var(--surface); border:1px solid var(--border); border-radius: var(--radius);
+    padding:16px; box-shadow: var(--shadow); display:flex; flex-direction:column; justify-content:center;
+  }
+  .bento-progreso{ display:flex; flex-direction:column; justify-content:center; gap:10px; }
+  .bento-progreso-cabecera{ font-size:14px; font-weight:700; color: var(--text); }
+  .bento-progreso-valor{ font-size:30px; font-weight:800; color: var(--text); }
+  .bento-progreso-barra{
+    height:10px; border-radius:999px; background: var(--surface-2); overflow:hidden;
+  }
+  .bento-progreso-relleno{
+    height:100%; border-radius:999px; width:0%;
+    background: linear-gradient(90deg, var(--card-entrada-bg), var(--accent));
+    transition: width .4s ease;
+  }
+  .bento-gauge-card{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .bento-gauge-box{ width:100%; height:150px; }
+}
+
 .dashboard-kpis{
   display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-bottom: 20px;
 }
@@ -640,8 +676,16 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
 }
 .dash-kpi-valor{ font-size:24px; font-weight:800; color: var(--text); }
 .dash-kpi-etiqueta{ font-size:12px; color: var(--text-muted); margin-top:4px; }
-.dash-kpi-destacado{ background: linear-gradient(135deg, var(--accent), var(--card-conteo-bg)); border:none; }
-.dash-kpi-destacado .dash-kpi-valor, .dash-kpi-destacado .dash-kpi-etiqueta{ color: var(--accent-text); }
+.dash-kpi-destacado{
+  background: linear-gradient(135deg, var(--accent) 0%, var(--card-traspaso-bg) 100%);
+  border:none; position:relative; overflow:hidden;
+}
+.dash-kpi-destacado::after{
+  content:""; position:absolute; top:-30%; right:-15%; width:120px; height:120px;
+  border-radius:50%; background: rgba(255,255,255,0.14); pointer-events:none;
+}
+.dash-kpi-destacado .dash-kpi-valor{ font-size:28px; }
+.dash-kpi-destacado .dash-kpi-valor, .dash-kpi-destacado .dash-kpi-etiqueta{ color: var(--accent-text); position:relative; }
 .dashboard-charts{
   display:grid; grid-template-columns: 1fr 1fr; gap:16px; padding-bottom: 40px;
 }
@@ -658,9 +702,77 @@ body[data-theme="dark"] .toast{ background:#F7F6F3; color:#17191C; }
 .chart-legend-dot{ width:10px; height:10px; border-radius:3px; flex-shrink:0; }
 .chart-legend-label{ color: var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .chart-legend-valor{ color: var(--text-muted); flex-shrink:0; }
+
+/* ---- Dashboard en el teléfono: una sola columna, tarjetas más
+   compactas — los mismos 4 gráficos y los mismos 6 KPIs, solo
+   apilados para que quepan bien en una pantalla angosta. ---- */
+@media (max-width: 859px){
+  .dashboard-kpis{ grid-template-columns: repeat(2, 1fr); gap:10px; }
+  .dash-kpi{ padding:12px; }
+  .dash-kpi-valor{ font-size:20px; }
+  .dashboard-charts{ grid-template-columns: 1fr; gap:12px; }
+  .dashboard-chart-card{ min-height:auto; padding:14px; }
+  .chart-box{ height:170px; }
+}
+@media (max-width: 859px) and (min-width: 480px){
+  .dashboard-kpis{ grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 1180px) and (min-width: 860px){
   .dashboard-kpis{ grid-template-columns: repeat(2, 1fr); }
 }
 @media (min-width: 1500px){
   .dashboard-kpis{ grid-template-columns: repeat(6, 1fr); }
+}
+
+/* ---- Selector de vista (Cuadro / Lista / Sin gráficos) — pensado
+   para el teléfono, donde el espacio manda; en PC ya hay lugar de
+   sobra para todo, así que el selector se oculta ahí. ---- */
+.vista-selector{ display:flex; gap:8px; margin-bottom:16px; }
+.vista-btn{
+  flex:1; border:1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  border-radius:999px; padding:8px 10px; font-size:12.5px; font-weight:700; cursor:pointer;
+}
+.vista-btn.active{ background: var(--accent); color: var(--accent-text); border-color: transparent; }
+
+/* Vista "Lista": los gráficos se apilan uno por uno, más grandes,
+   con toda la leyenda visible — para revisar con calma. Es la que ya
+   se ve por defecto en pantallas angostas, así que solo hace falta
+   confirmar 1 columna explícitamente. */
+#dashboard-desktop[data-vista="lista"] .dashboard-charts{ grid-template-columns: 1fr; }
+
+/* Vista "Cuadro": tarjetas más chicas, dos por fila, sin leyenda
+   completa — para ver todo de un vistazo. */
+#dashboard-desktop[data-vista="cuadro"] .dashboard-charts{ grid-template-columns: 1fr 1fr; gap:10px; }
+#dashboard-desktop[data-vista="cuadro"] .dashboard-chart-card{ padding:10px; min-height:auto; }
+#dashboard-desktop[data-vista="cuadro"] .dashboard-chart-card h3{ font-size:11.5px; margin-bottom:6px; }
+#dashboard-desktop[data-vista="cuadro"] .chart-box{ height:110px; }
+#dashboard-desktop[data-vista="cuadro"] .chart-legend{ display:none; }
+
+/* Vista "Sin gráficos": solo los números, nada de canvas — la más
+   liviana y rápida de leer. */
+#dashboard-desktop[data-vista="sin-graficos"] .dashboard-charts,
+#dashboard-desktop[data-vista="sin-graficos"] .dashboard-actividad-card{ display:none; }
+
+.dashboard-actividad-card{
+  background: var(--surface); border:1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; box-shadow: var(--shadow); margin-top:16px; margin-bottom:40px;
+}
+.dashboard-actividad-card h3{ margin:0 0 12px; font-size:14px; color: var(--text-muted); }
+.actividad-item{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+.actividad-item:last-child{ border-bottom:none; }
+.actividad-avatar{
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  background: var(--surface-2); color: var(--text); display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:13px;
+}
+.actividad-texto{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.actividad-nombre{ font-size:13px; font-weight:700; }
+.actividad-detalle{ font-size:12px; color: var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.actividad-chip{
+  font-size:10.5px; color: var(--text-muted); background: var(--surface-2);
+  border-radius:999px; padding:4px 9px; flex-shrink:0; white-space:nowrap;
+}
+
+@media (min-width: 860px){
+  .vista-selector{ display:none; }
 }
