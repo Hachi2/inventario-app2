@@ -133,7 +133,7 @@
           </div>
           <div class="dash-kpi bento-progreso">
             <div class="bento-progreso-cabecera">
-              <span>Avance de conteo</span>
+              <span id="bento-progreso-titulo">Stock disponible</span>
             </div>
             <div class="bento-progreso-valor" id="bento-conteo-valor">—</div>
             <div class="bento-progreso-barra"><div id="bento-conteo-barra" class="bento-progreso-relleno"></div></div>
@@ -143,7 +143,7 @@
             <div class="chart-box bento-gauge-box">
               <canvas id="chart-bento-gauge"></canvas>
             </div>
-            <p class="muted small" id="bento-gauge-sub">% del stock ya contado</p>
+            <p class="muted small" id="bento-gauge-sub">% de Stock Final disponible</p>
           </div>
         </div>
 
@@ -428,6 +428,11 @@
       <div id="cantidad-nota-wrap" class="field" hidden>
         <span>Observación (opcional)</span>
         <textarea id="cantidad-nota" rows="2" placeholder="Ej. producto dañado, faltante por revisar..."></textarea>
+      </div>
+      <div id="cantidad-imagen-wrap" class="field" hidden>
+        <span>Foto del artículo (opcional)</span>
+        <input type="file" id="cantidad-imagen" accept="image/*" capture="environment">
+        <img id="cantidad-imagen-preview" class="imagen-preview" hidden alt="Vista previa">
       </div>
       <button id="btn-confirmar-cantidad" class="btn btn-primary btn-block btn-lg">Agregar a la lista</button>
     </div>

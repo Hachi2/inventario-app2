@@ -355,10 +355,32 @@ const Movimientos = {
   },
 
   async finalizar() {
+    // BUG REAL ENCONTRADO Y CORREGIDO: esta función no tenía ninguna
+    // protección contra doble clic. Si el usuario tocaba "Finalizar" dos
+    // veces seguidas (muy fácil de hacer sin querer, sobre todo con
+    // internet intermitente mientras la app espera la respuesta de la
+    // nube), el mismo carrito se procesaba dos veces completas — de ahí
+    // que los números "se repitieran" y el dashboard mostrara cada vez
+    // más de lo real. Ahora, mientras haya un guardado en curso, un
+    // segundo clic no hace nada.
+    if (this._procesando) return;
     if (this.carrito.length === 0) {
       mostrarToast("Agrega al menos un artículo a la lista");
       return;
     }
+    this._procesando = true;
+    const boton = document.getElementById("btn-finalizar");
+    if (boton) boton.disabled = true;
+
+    try {
+      await this._finalizarInterno();
+    } finally {
+      this._procesando = false;
+      if (boton) boton.disabled = false;
+    }
+  },
+
+  async _finalizarInterno() {
     const cfg = MOVIMIENTOS_CONFIG[this.tipoActual];
 
     // -------- Validaciones de los campos que aplican a toda la lista --------
@@ -404,6 +426,7 @@ const Movimientos = {
           "FECHA MODIFICACIÓN": ahora, _almacenId: Almacenes.actualId, _uid: crearUid(),
         };
         await DB.put("inventario", nueva);
+        this._sincronizarItem(nueva);
         await Auditoria.registrar("Entrada", "(mercancía nueva)", "DESCRIPCIÓN", "-",
           `${linea.descripcion}: ${linea.cantidad} uds (trajo: ${persona}, ${departamento})`);
         actualizados.push(nueva);
@@ -432,6 +455,12 @@ const Movimientos = {
         item["GALPÓN"] = linea.destino;
         item["TRASPASO"] = `Cambió de galpón: "${antes || "—"}" → "${linea.destino}" · ${linea.cantidad} uds · ${ahora}`;
         item["AUTORIZADO POR"] = autorizadoPor;
+        item["OBSERVACIONES"] = agregarEtiquetaTraspaso(item["OBSERVACIONES"], linea.destino);
+        // Nota: mover de galpón NO resta del Stock Final — el material
+        // sigue completo dentro del mismo almacén, solo cambia de
+        // ubicación física. Lo que sí resta es un traspaso HACIA OTRO
+        // ALMACÉN (rama de abajo), porque ahí el material realmente sale
+        // de la base de datos de este almacén.
         await Auditoria.registrar("Traspaso", ref, "GALPÓN", antes, `${linea.destino} (${linea.cantidad} uds, autorizó: ${autorizadoPor})`);
       } else if (this.tipoActual === "traspaso" && this.traspasoModo === "almacen") {
         await this._traspasarAOtroAlmacen(item, linea, autorizadoPor, ahora, nombreOrigen, ref);
@@ -453,6 +482,17 @@ const Movimientos = {
       }
       item["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";
       item["FECHA MODIFICACIÓN"] = ahora;
+      // IMPORTANTE: toda operación que NO pase por _traspasarAOtroAlmacen
+      // (que ya se sincroniza sola) tiene que subirse a la nube ACÁ, antes
+      // de que Inventario.cargarDesdeDB() (más abajo) vuelva a bajar los
+      // datos del almacén — si no, ese "bajar de nuevo" pisa el cambio que
+      // se acaba de hacer con la versión vieja que todavía hay en la nube,
+      // y la Entrada/Salida/Conteo desaparece como si nunca se hubiera
+      // guardado. Este fue exactamente el bug reportado: los números
+      // "se revertían" solos apenas se guardaba el movimiento.
+      if (this.tipoActual !== "traspaso" || this.traspasoModo !== "almacen") {
+        this._sincronizarItem(item);
+      }
       actualizados.push(item);
     }
 
@@ -473,11 +513,15 @@ const Movimientos = {
     const almacenDestino = Almacenes.cacheLista.find((a) => a.id === almacenDestinoId);
     if (!almacenDestino) return;
 
-    const antes = Number(item["TOTAL PIEZAS"]) || 0;
-    item["TOTAL PIEZAS"] = Math.max(0, antes - linea.cantidad);
+    // El material SÍ sale de este almacén, así que resta del Stock Final
+    // — pero a través de CANT. TRASPASADA, no tocando TOTAL PIEZAS
+    // (que es el Stock Inicial y se mantiene fijo como venía del Excel).
+    const antes = item["CANT. TRASPASADA"] === "" || item["CANT. TRASPASADA"] == null ? 0 : Number(item["CANT. TRASPASADA"]) || 0;
+    item["CANT. TRASPASADA"] = antes + linea.cantidad;
     item["STOCK FINAL"] = calcularStockFinal(item);
     item["TRASPASO"] = `Salió hacia "${almacenDestino.nombre}" · ${linea.cantidad} uds · ${ahora}`;
     item["AUTORIZADO POR"] = autorizadoPor;
+    item["OBSERVACIONES"] = agregarEtiquetaTraspaso(item["OBSERVACIONES"], almacenDestino.nombre);
 
     const todos = await DB.getAll("inventario");
     const existente = todos.find((r) => r._almacenId === almacenDestinoId && r.CODIGO === item.CODIGO);
@@ -503,6 +547,7 @@ const Movimientos = {
       nueva["TOTAL PIEZAS"] = linea.cantidad;
       nueva["CONTEO"] = "";
       nueva["ENTREGADO"] = 0;
+      nueva["CANT. TRASPASADA"] = 0;
       nueva["STOCK FINAL"] = linea.cantidad;
       nueva["TRASPASO"] = notaEntrada;
       nueva["AUTORIZADO POR"] = autorizadoPor;
@@ -514,8 +559,8 @@ const Movimientos = {
         "TOTAL PIEZAS", "-", `${linea.cantidad} (llegaron desde "${nombreOrigen}", autorizó: ${autorizadoPor})`);
     }
 
-    await Auditoria.registrar("Traspaso", ref, "TOTAL PIEZAS", antes,
-      `${item["TOTAL PIEZAS"]} (se enviaron ${linea.cantidad} a "${almacenDestino.nombre}", autorizó: ${autorizadoPor})`);
+    await Auditoria.registrar("Traspaso", ref, "CANT. TRASPASADA", antes,
+      `${item["CANT. TRASPASADA"]} (se enviaron ${linea.cantidad} a "${almacenDestino.nombre}", autorizó: ${autorizadoPor})`);
   },
 
   /* Empuja un artículo modificado a la nube (si está conectada), sin

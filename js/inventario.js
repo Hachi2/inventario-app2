@@ -21,11 +21,17 @@ function normalizarTexto(s) {
     .toLowerCase();
 }
 
+/* Stock Final = Stock Inicial (TOTAL PIEZAS) - (Salida + Traspaso).
+   El CONTEO ya NO resta del Stock Final — queda como un campo de
+   seguimiento aparte (lo que se contó físicamente), sin tocar el
+   cálculo, salvo que en el futuro se agregue una auditoría física
+   reconciliada. Un traspaso se trata internamente como una salida
+   (ver movimientos.js), acumulando en CANT. TRASPASADA. */
 function calcularStockFinal(item) {
   const total = Number(item["TOTAL PIEZAS"]) || 0;
-  const conteo = item["CONTEO"] === "" || item["CONTEO"] == null ? 0 : Number(item["CONTEO"]) || 0;
   const entregado = item["ENTREGADO"] === "" || item["ENTREGADO"] == null ? 0 : Number(item["ENTREGADO"]) || 0;
-  return total - conteo - entregado;
+  const traspasado = item["CANT. TRASPASADA"] === "" || item["CANT. TRASPASADA"] == null ? 0 : Number(item["CANT. TRASPASADA"]) || 0;
+  return total - entregado - traspasado;
 }
 
 /* Identificador estable, igual en todos los dispositivos, para poder
@@ -186,12 +192,14 @@ const Inventario = {
         item[col] = valor ?? "";
       });
       item["CODIGO"] = String(fila[codigoKey] ?? "").trim();
+      item["CANT. TRASPASADA"] = 0;
       item["STOCK FINAL"] = calcularStockFinal(item);
       item["PERSONA"] = "";
       item["DEPARTAMENTO"] = "";
       item["TRASPASO"] = "";
       item["AUTORIZADO POR"] = "";
       item["UBICACIÓN"] = "";
+      item["IMAGEN"] = "";
       item["USUARIO"] = "";
       item["FECHA MODIFICACIÓN"] = "";
       item["_almacenId"] = almacenId;
@@ -250,7 +258,7 @@ const Inventario = {
 
   /* ---------------- Exportar ---------------- */
   filasParaExportar() {
-    const encabezados = [...COLUMNAS, "STOCK FINAL", "PERSONA", "DEPARTAMENTO", "TRASPASO", "AUTORIZADO POR", "UBICACIÓN", "USUARIO", "FECHA MODIFICACIÓN"];
+    const encabezados = [...COLUMNAS, "STOCK FINAL", "PERSONA", "DEPARTAMENTO", "TRASPASO", "AUTORIZADO POR", "CANT. TRASPASADA", "UBICACIÓN", "IMAGEN", "USUARIO", "FECHA MODIFICACIÓN"];
     return this.cache.map((item) => {
       const fila = {};
       encabezados.forEach((col) => (fila[col] = item[col] ?? ""));
@@ -265,7 +273,7 @@ const Inventario = {
   },
 
   exportarExcel() {
-    const encabezados = [...COLUMNAS, "STOCK FINAL", "PERSONA", "DEPARTAMENTO", "TRASPASO", "AUTORIZADO POR", "UBICACIÓN", "USUARIO", "FECHA MODIFICACIÓN"];
+    const encabezados = [...COLUMNAS, "STOCK FINAL", "PERSONA", "DEPARTAMENTO", "TRASPASO", "AUTORIZADO POR", "CANT. TRASPASADA", "UBICACIÓN", "IMAGEN", "USUARIO", "FECHA MODIFICACIÓN"];
     const hoja = XLSX.utils.json_to_sheet(this.filasParaExportar(), { header: encabezados });
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, hoja, this.nombreHojaAlmacen());

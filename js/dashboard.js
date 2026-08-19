@@ -8,11 +8,9 @@
    ninguna librería externa — así el dashboard nunca depende de
    que un CDN cargue bien.
 
-   Los 4 gráficos son circulares (dona):
-   1) Total de piezas vs Stock final   (Stock final = Total - Conteo - Entregado)
-   2) Total de piezas vs Total entregado
-   3) Cantidad disponible por producto (Disponible = Total - Entregado)
-   4) Total de piezas vs Conteo, con el % contado en el centro
+   Fórmula: Stock Final = Stock Inicial (Total piezas) − (Entregado +
+   Traspasado). El Conteo ya NO resta del Stock Final — queda como
+   dato de seguimiento aparte (ver inventario.js).
 
    Se vuelve a pintar solo: al entrar a Inicio, al cambiar de
    almacén, al cargar/reemplazar un Excel, y al cambiar tema o
@@ -76,27 +74,33 @@ const Dashboard = {
     const totalPiezas = items.reduce((s, i) => s + num(i["TOTAL PIEZAS"]), 0);
     const totalConteo = items.reduce((s, i) => s + num(i["CONTEO"]), 0);
     const totalEntregado = items.reduce((s, i) => s + num(i["ENTREGADO"]), 0);
+    const totalTraspasado = items.reduce((s, i) => s + num(i["CANT. TRASPASADA"]), 0);
     const totalStockFinal = items.reduce((s, i) => s + num(i["STOCK FINAL"]), 0);
-    return { items, totalPiezas, totalConteo, totalEntregado, totalStockFinal };
+    return { items, totalPiezas, totalConteo, totalEntregado, totalTraspasado, totalStockFinal };
   },
 
-  /* 6 tarjetas — se quitaron "Filas cargadas" y "Filas ya contadas" a
-     pedido. Se dejó "Códigos distintos" porque, al permitir la app varios
-     lotes con el mismo CODIGO, esta cifra es la única forma de ver de un
-     vistazo cuántos artículos distintos hay en el almacén (las "filas
-     cargadas" mezclan lotes repetidos y confunden esa lectura). */
+  /* Fila de KPIs LIMPIA: Total piezas, Stock final y el % ya se ven
+     en el bloque "bento" de arriba (en escritorio), así que acá solo
+     van los datos que NO se repiten en ningún otro lado — Códigos
+     distintos, Total entregado y Total traspasado. "Total Contado" se
+     quitó del todo de las tarjetas por pedido (el Conteo sigue
+     registrado por artículo, solo que ya no tiene una tarjeta propia
+     acá). En el teléfono (donde no se ve el bento), estos 3 KPIs son
+     los únicos números que aparecen arriba de los gráficos — por eso
+     agregamos Total piezas y Stock final como las primeras dos, y el
+     resto completa el cuadro sin repetir nada entre sí. */
   _renderKpis() {
-    const { items, totalPiezas, totalConteo, totalEntregado, totalStockFinal } = this._agregados();
-    const porcContado = totalPiezas > 0 ? (totalConteo / totalPiezas) * 100 : 0;
+    const { items, totalPiezas, totalEntregado, totalTraspasado, totalStockFinal } = this._agregados();
     const codigosUnicos = new Set(items.map((i) => i.CODIGO).filter(Boolean)).size;
+    const porcDisponible = totalPiezas > 0 ? (totalStockFinal / totalPiezas) * 100 : 0;
 
     const tarjetas = [
-      { valor: codigosUnicos.toLocaleString("es"), etiqueta: "Códigos distintos" },
       { valor: totalPiezas.toLocaleString("es"), etiqueta: "Total piezas" },
-      { valor: totalConteo.toLocaleString("es"), etiqueta: "Total contado" },
-      { valor: totalEntregado.toLocaleString("es"), etiqueta: "Total entregado" },
       { valor: totalStockFinal.toLocaleString("es"), etiqueta: "Stock final" },
-      { valor: `${porcContado.toFixed(0)}%`, etiqueta: "% del stock contado", destacado: true },
+      { valor: codigosUnicos.toLocaleString("es"), etiqueta: "Códigos distintos" },
+      { valor: totalEntregado.toLocaleString("es"), etiqueta: "Total entregado" },
+      { valor: totalTraspasado.toLocaleString("es"), etiqueta: "Total traspasado" },
+      { valor: `${porcDisponible.toFixed(0)}%`, etiqueta: "% stock disponible", destacado: true },
     ];
 
     document.getElementById("dashboard-kpis").innerHTML = tarjetas.map((t) => `
@@ -110,10 +114,11 @@ const Dashboard = {
     if (bentoHero) {
       bentoHero.textContent = totalPiezas.toLocaleString("es");
       document.getElementById("bento-stock-final").textContent = totalStockFinal.toLocaleString("es");
-      document.getElementById("bento-conteo-valor").textContent = totalConteo.toLocaleString("es");
-      document.getElementById("bento-conteo-barra").style.width = `${Math.min(porcContado, 100).toFixed(0)}%`;
+      document.getElementById("bento-conteo-valor").textContent = totalStockFinal.toLocaleString("es");
+      document.getElementById("bento-conteo-barra").style.width = `${Math.min(porcDisponible, 100).toFixed(0)}%`;
       document.getElementById("bento-conteo-sub").textContent =
-        `${porcContado.toFixed(0)}% contado sobre ${totalPiezas.toLocaleString("es")} piezas totales`;
+        `${porcDisponible.toFixed(0)}% disponible sobre ${totalPiezas.toLocaleString("es")} piezas totales`;
+      document.getElementById("bento-progreso-titulo").textContent = "Stock disponible";
     }
   },
 
@@ -197,11 +202,12 @@ const Dashboard = {
     // 4) Total de piezas vs Conteo, con el % contado en el centro
     this._donaProgreso("chart-entregado-vs-disponible", "leyenda-entregado-vs-disponible", tema, totalConteo, totalPiezas, tema.paleta[1], "Contado");
 
-    // Gauge del bloque "bento" de arriba (mismo dato que el KPI
-    // destacado, presentado como gráfico — solo visible en escritorio)
+    // Gauge del bloque "bento" de arriba: % de Stock Final disponible
+    // = (Stock Final / Stock Inicial) × 100 — no repite el % contado
+    // que ya muestra el gráfico 4 de abajo.
     const canvasGauge = document.getElementById("chart-bento-gauge");
     if (canvasGauge) {
-      this._donaProgreso("chart-bento-gauge", null, tema, totalConteo, totalPiezas, tema.paleta[1], "Contado");
+      this._donaProgreso("chart-bento-gauge", null, tema, totalStockFinalActual, totalPiezas, tema.paleta[0], "Disponible");
     }
 
     this._renderActividad();
