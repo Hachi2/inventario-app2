@@ -173,6 +173,42 @@ const FirebaseSync = {
     }
   },
 
+  async eliminarDocumento(coleccion, id) {
+    if (!this.activo) return false;
+    try {
+      const listo = await this.iniciar();
+      if (!listo) return false;
+      const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      await deleteDoc(doc(this.db, coleccion, id));
+      return true;
+    } catch (err) {
+      console.warn(`No se pudo borrar de la nube (${coleccion}/${id}):`, err.message || err);
+      return false;
+    }
+  },
+
+  /* Borra varios documentos de una nube de una sola vez (por ejemplo,
+     todas las filas de un almacén que se está eliminando). Igual que
+     guardarLote, en grupos de 450 por el límite de Firestore. */
+  async eliminarLote(coleccion, ids) {
+    if (!this.activo || ids.length === 0) return false;
+    try {
+      const listo = await this.iniciar();
+      if (!listo) return false;
+      const { doc, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      for (let i = 0; i < ids.length; i += 450) {
+        const grupo = ids.slice(i, i + 450);
+        const lote = writeBatch(this.db);
+        grupo.forEach((id) => lote.delete(doc(this.db, coleccion, id)));
+        await lote.commit();
+      }
+      return true;
+    } catch (err) {
+      console.warn(`No se pudo borrar el lote de la nube (${coleccion}):`, err.message || err);
+      return false;
+    }
+  },
+
   /* Escucha cambios en tiempo real de un almacén — así, cuando el
      Coordinador carga o modifica algo, el resto de los dispositivos
      conectados lo ven aparecer solos, sin recargar la página.

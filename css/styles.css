@@ -501,6 +501,13 @@ body[data-theme="dark"] .editable-badge{ color: #F2B058; }
 }
 .user-item .u-name{ font-weight:700; font-size:14.5px; }
 .user-item .u-meta{ font-size:12px; color: var(--text-muted); }
+.almacen-item{ gap:10px; }
+.almacen-item-info{ flex:1; min-width:0; }
+.btn-borrar-almacen{
+  width:32px; height:32px; flex-shrink:0; color: var(--text-muted);
+}
+.btn-borrar-almacen:hover{ background: rgba(198,64,64,0.12); color: var(--danger, #C64040); border-color: rgba(198,64,64,0.3); }
+.btn-borrar-almacen svg{ width:14px; height:14px; }
 .role-pill{ font-size:11px; padding:4px 10px; border-radius:999px; background: var(--surface-2); font-weight:700; }
 .badge-experimental{
   font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px;

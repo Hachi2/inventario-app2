@@ -84,9 +84,15 @@ const Almacenes = {
     return lista.find((a) => a.nombre.trim().toLowerCase() === norm) || null;
   },
 
+  /* Borra un almacén completo: todas sus filas de inventario, el
+     almacén en sí, y su metadata de última carga — local Y en la
+     nube (si está conectada). Sin la parte de la nube, el almacén
+     "resucitaría" solo la próxima vez que otro dispositivo sincronice
+     y lo vuelva a traer — por eso también hay que borrarlo ahí. */
   async eliminar(id) {
     const todos = await DB.getAll("inventario");
-    const idsABorrar = todos.filter((it) => it._almacenId === id).map((it) => it._id);
+    const filasDelAlmacen = todos.filter((it) => it._almacenId === id);
+    const idsABorrar = filasDelAlmacen.map((it) => it._id);
     await DB.deleteMany("inventario", idsABorrar);
     await DB.delete("almacenes", id);
     await DB.delete("config", `ultima_carga_${id}`);
@@ -94,6 +100,12 @@ const Almacenes = {
     if (this.actualId === id) {
       this.actualId = null;
       await this.actual();
+    }
+
+    if (typeof FirebaseSync !== "undefined" && FirebaseSync.activo) {
+      const uids = filasDelAlmacen.map((it) => it._uid).filter(Boolean);
+      FirebaseSync.eliminarLote("inventario", uids);
+      FirebaseSync.eliminarDocumento("almacenes", id);
     }
   },
 };

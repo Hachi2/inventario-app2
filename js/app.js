@@ -141,17 +141,19 @@ function renderListaAlmacenes() {
     cont.innerHTML = `<p class="muted small">Todavía no hay ningún almacén cargado.</p>`;
     return;
   }
+  const puedeBorrar = Auth.isGestor();
   cont.innerHTML = Almacenes.cacheLista.map((a) => `
-    <div class="user-item" data-id="${a.id}" style="cursor:pointer;${a.id === Almacenes.actualId ? "border:1px solid var(--accent);" : ""}">
-      <div>
+    <div class="user-item almacen-item" data-id="${a.id}" style="${a.id === Almacenes.actualId ? "border:1px solid var(--accent);" : ""}">
+      <div class="almacen-item-info" style="cursor:pointer;">
         <div class="u-name">${escapeHtml(a.nombre)}</div>
         <div class="u-meta">${a.id === Almacenes.actualId ? "Almacén actual" : "Toca para usar este almacén"}</div>
       </div>
+      ${puedeBorrar ? `<button class="icon-btn btn-borrar-almacen" data-id="${a.id}" data-nombre="${escapeHtml(a.nombre)}" aria-label="Eliminar almacén" title="Eliminar este almacén">${svgIcon("cerrar")}</button>` : ""}
     </div>`).join("");
 
-  cont.querySelectorAll(".user-item").forEach((el) => {
+  cont.querySelectorAll(".almacen-item-info").forEach((el) => {
     el.addEventListener("click", async () => {
-      const id = el.dataset.id;
+      const id = el.closest(".almacen-item").dataset.id;
       if (id === Almacenes.actualId) { cerrarModal("modal-almacenes"); return; }
       await Almacenes.fijarActual(id);
       await Inventario.cargarDesdeDB();
@@ -161,6 +163,30 @@ function renderListaAlmacenes() {
       mostrarToast(`Ahora estás en "${Almacenes.nombreActual()}"`);
       if (pantallaActual === "consulta") Consulta.abrir();
       if (pantallaActual === "home") Dashboard.render();
+    });
+  });
+
+  cont.querySelectorAll(".btn-borrar-almacen").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const nombre = btn.dataset.nombre;
+      const eraElActual = id === Almacenes.actualId;
+      const confirmado = confirm(
+        `¿Eliminar el almacén "${nombre}"? Se borran TODOS sus datos (inventario, no el registro de actividad general) de este dispositivo y de la nube. Esta acción no se puede deshacer.`
+      );
+      if (!confirmado) return;
+      await Almacenes.eliminar(id);
+      mostrarToast(`Almacén "${nombre}" eliminado`);
+      renderListaAlmacenes();
+      poblarDatalistAlmacenes();
+      if (eraElActual) {
+        await Inventario.cargarDesdeDB();
+        actualizarPillAlmacen();
+        actualizarEstadoBD();
+        if (pantallaActual === "consulta") Consulta.abrir();
+        if (pantallaActual === "home") Dashboard.render();
+      }
     });
   });
 }
