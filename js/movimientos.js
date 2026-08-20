@@ -52,6 +52,7 @@ const MOVIMIENTOS_CONFIG = {
     absoluto: true,
     permiteNota: true,
     permiteUbicacion: true,
+    permiteImagen: true,
   },
 };
 
@@ -251,8 +252,62 @@ const Movimientos = {
     document.getElementById("cantidad-nota-wrap").hidden = !cfg.permiteNota;
     document.getElementById("cantidad-nota").value = esConteo ? (item["OBSERVACIONES"] || "") : "";
 
+    document.getElementById("cantidad-imagen-wrap").hidden = !cfg.permiteImagen;
+    document.getElementById("cantidad-imagen").value = "";
+    this._imagenPendiente = undefined;
+    const preview = document.getElementById("cantidad-imagen-preview");
+    if (esConteo && item["IMAGEN"]) {
+      preview.src = item["IMAGEN"];
+      preview.hidden = false;
+      this._imagenPendiente = item["IMAGEN"]; // si no la cambian, se conserva la que ya había
+    } else {
+      preview.hidden = true;
+      preview.src = "";
+    }
+
     abrirModal("modal-cantidad");
     setTimeout(() => document.getElementById("cantidad-input").focus(), 200);
+  },
+
+  /* Lee la foto elegida, la reduce a un tamaño razonable (máx. 480px de
+     ancho, JPEG) y la deja lista en this._imagenPendiente para cuando se
+     confirme la cantidad. Se comprime en el propio teléfono, sin subir
+     nada a ningún lado — así una foto de 4-8MB de la cámara queda en
+     unos pocos KB y no infla la base de datos ni el Excel. */
+  procesarImagenSeleccionada(file) {
+    return new Promise((resolve) => {
+      if (!file) return resolve();
+      const lector = new FileReader();
+      lector.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxAncho = 320; // a propósito, chico: si la foto quedara más
+          // pesada que esto en base64, se arriesga a pasarse del límite de
+          // caracteres por celda que tiene Excel (32.767)
+          const escala = Math.min(1, maxAncho / img.width);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * escala);
+          canvas.height = Math.round(img.height * escala);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          let dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+          if (dataUrl.length > 30000) {
+            // Todavía muy pesada para cumplir el límite de Excel — se
+            // comprime una vez más, más agresivo.
+            dataUrl = canvas.toDataURL("image/jpeg", 0.35);
+          }
+          this._imagenPendiente = dataUrl;
+          const preview = document.getElementById("cantidad-imagen-preview");
+          preview.src = dataUrl;
+          preview.hidden = false;
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve();
+        img.src = lector.result;
+      };
+      lector.onerror = () => resolve();
+      lector.readAsDataURL(file);
+    });
   },
 
   confirmarCantidad() {
@@ -279,20 +334,23 @@ const Movimientos = {
       }
       destino = sel.options[sel.selectedIndex].textContent;
     }
-    let nota, ubicacion;
+    let nota, ubicacion, imagen;
     if (cfg.permiteNota) {
       nota = document.getElementById("cantidad-nota").value.trim();
     }
     if (cfg.permiteUbicacion) {
       ubicacion = document.getElementById("cantidad-ubicacion").value.trim();
     }
-    this._agregarACarrito(this.itemPendiente, cantidad, destino, nota, ubicacion);
+    if (cfg.permiteImagen) {
+      imagen = this._imagenPendiente;
+    }
+    this._agregarACarrito(this.itemPendiente, cantidad, destino, nota, ubicacion, imagen);
     cerrarModal("modal-cantidad");
     document.getElementById("search-input").value = "";
     document.getElementById("mov-sugerencias").innerHTML = "";
   },
 
-  _agregarACarrito(item, cantidad, destino, nota, ubicacion) {
+  _agregarACarrito(item, cantidad, destino, nota, ubicacion, imagen) {
     const cfg = MOVIMIENTOS_CONFIG[this.tipoActual];
     const existente = this.carrito.find((l) => l.id === item._id);
     if (existente) {
@@ -300,6 +358,7 @@ const Movimientos = {
       if (destino) existente.destino = destino;
       if (nota !== undefined) existente.nota = nota;
       if (ubicacion !== undefined) existente.ubicacion = ubicacion;
+      if (imagen !== undefined) existente.imagen = imagen;
     } else {
       this.carrito.push({
         id: item._id,
@@ -310,6 +369,7 @@ const Movimientos = {
         destino,
         nota,
         ubicacion,
+        imagen,
       });
     }
     this.render();
@@ -478,6 +538,10 @@ const Movimientos = {
           const ubicAntes = item["UBICACIÓN"] || "-";
           item["UBICACIÓN"] = linea.ubicacion;
           await Auditoria.registrar("Conteo", ref, "UBICACIÓN", ubicAntes, linea.ubicacion);
+        }
+        if (linea.imagen && linea.imagen !== item["IMAGEN"]) {
+          item["IMAGEN"] = linea.imagen;
+          await Auditoria.registrar("Conteo", ref, "IMAGEN", "-", "foto actualizada");
         }
       }
       item["USUARIO"] = Auth.currentUser ? Auth.currentUser.usuario : "";

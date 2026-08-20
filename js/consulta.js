@@ -90,7 +90,8 @@ const Consulta = {
     return `
       <div class="consulta-card">
         <div class="consulta-card-top">
-          <div>
+          ${item["IMAGEN"] ? `<img src="${item["IMAGEN"]}" class="consulta-thumb" alt="Foto de ${escapeHtml(item["DESCRIPCIÓN"] || item.CODIGO || "artículo")}">` : ""}
+          <div class="consulta-top-texto">
             <div class="consulta-codigo">${item.CODIGO ? resaltar(item.CODIGO, texto) : '<span class="muted">(sin código)</span>'}</div>
             <div class="consulta-desc">${resaltar(item["DESCRIPCIÓN"] || "", texto)}</div>
           </div>

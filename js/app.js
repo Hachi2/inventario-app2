@@ -457,6 +457,9 @@ async function iniciar() {
 
   // -------- Cantidad (Entrada/Salida/Traspaso) --------
   document.getElementById("btn-confirmar-cantidad").addEventListener("click", () => Movimientos.confirmarCantidad());
+  document.getElementById("cantidad-imagen").addEventListener("change", (e) => {
+    Movimientos.procesarImagenSeleccionada(e.target.files[0]);
+  });
 
   // -------- Barra inferior de acciones --------
   document.getElementById("btn-limpiar-lista").addEventListener("click", () => Movimientos.limpiarLista());

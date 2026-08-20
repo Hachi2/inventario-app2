@@ -31,6 +31,14 @@ const Dashboard = {
     const sinDatos = document.getElementById("dashboard-sin-datos");
     document.getElementById("dashboard-almacen-nombre").textContent = Almacenes.nombreActual() || "";
 
+    // La vista de los botones de acción (Cuadro/Lista) debe aplicarse
+    // siempre, incluso si todavía no hay ningún almacén cargado — por
+    // eso va ANTES del "return" de abajo.
+    const vista = this.vistaActual();
+    const menu = document.querySelector(".home-menu");
+    if (menu && vista !== "sin-graficos") menu.setAttribute("data-vista", vista);
+    document.querySelectorAll(".vista-btn").forEach((b) => b.classList.toggle("active", b.dataset.vista === vista));
+
     if (!Inventario.cache.length) {
       cont.hidden = true;
       sinDatos.hidden = false;
@@ -38,10 +46,7 @@ const Dashboard = {
     }
     sinDatos.hidden = true;
     cont.hidden = false;
-    document.getElementById("dashboard-desktop").setAttribute("data-vista", this.vistaActual());
-    document.querySelectorAll(".vista-btn").forEach((b) => {
-      b.classList.toggle("active", b.dataset.vista === this.vistaActual());
-    });
+    document.getElementById("dashboard-desktop").setAttribute("data-vista", vista);
 
     this._renderKpis();
     this._renderCharts();
@@ -262,6 +267,13 @@ const Dashboard = {
     localStorage.setItem(this.VISTA_KEY, vista);
     const cont = document.getElementById("dashboard-desktop");
     if (cont) cont.setAttribute("data-vista", vista);
+    // El selector de vista controla TANTO el dashboard como los botones
+    // de acción (Consulta/Entrada/Salida/Traspaso/Conteo) — "Cuadro" los
+    // muestra como tarjetas grandes de colores (como siempre), "Lista"
+    // los acomoda en filas compactas. "Sin gráficos" no tiene un
+    // equivalente para los botones, así que ahí quedan como estaban.
+    const menu = document.querySelector(".home-menu");
+    if (menu && vista !== "sin-graficos") menu.setAttribute("data-vista", vista);
     document.querySelectorAll(".vista-btn").forEach((b) => {
       b.classList.toggle("active", b.dataset.vista === vista);
     });
